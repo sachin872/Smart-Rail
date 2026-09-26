@@ -16,14 +16,21 @@ class TrainSimulator:
         self.sim_speed_multiplier = 1.0
         self.current_seed = 42
         self.active_scenario = "CLEAN_RUN"
+        self.is_stepped = False
         self.clock = datetime.now()
         self.train_states: Dict[str, Dict[str, Any]] = {}
         self.subscribers: List[Any] = []
         self.reset_simulation(seed=42)
 
+    def get_clock(self) -> datetime:
+        if not self.is_stepped and self.active_scenario == "CLEAN_RUN":
+            self.clock = datetime.now()
+        return self.clock
+
     def reset_simulation(self, seed: int = 42):
         self.current_seed = seed
         random.seed(seed)
+        self.is_stepped = False
         self.clock = datetime.now()
         self.active_scenario = "CLEAN_RUN"
         data_cleaner.reset_metrics()
@@ -249,6 +256,7 @@ class TrainSimulator:
         """
         Advances the simulation clock by `seconds` and moves trains along the network graph.
         """
+        self.is_stepped = True
         self.clock += timedelta(seconds=seconds)
         clock_str = self.clock.isoformat()
 

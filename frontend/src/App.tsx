@@ -14,12 +14,25 @@ export function App() {
   const [activeScenario, setActiveScenario] = useState<string>("CLEAN_RUN");
   const [trains, setTrains] = useState<TrainState[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isStepped, setIsStepped] = useState<boolean>(false);
   const playIntervalRef = useRef<any>(null);
+
+  // Live real-time clock ticker: updates every second when in normal real-time mode
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!isPlaying && !isStepped && activeScenario === "CLEAN_RUN") {
+        setSimTime(new Date().toISOString());
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isPlaying, isStepped, activeScenario]);
 
   const fetchGlobalState = async () => {
     try {
       const health = await api.getHealth();
-      setSimTime(health.sim_time || new Date().toISOString());
+      if (isPlaying || isStepped || health.active_scenario !== "CLEAN_RUN") {
+        setSimTime(health.sim_time || new Date().toISOString());
+      }
       setActiveScenario(health.active_scenario || "CLEAN_RUN");
       const trainsRes = await api.getTrains();
       setTrains(trainsRes.data || []);
@@ -32,10 +45,11 @@ export function App() {
     fetchGlobalState();
     const interval = setInterval(fetchGlobalState, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isPlaying, isStepped]);
 
   const handleStep = async () => {
     try {
+      setIsStepped(true);
       const res = await api.stepSimulation();
       setSimTime(res.clock);
       setActiveScenario(res.scenario);
@@ -48,8 +62,9 @@ export function App() {
   const handleReset = async () => {
     try {
       setIsPlaying(false);
-      const res = await api.resetSimulation(42);
-      setSimTime(res.sim_time);
+      setIsStepped(false);
+      await api.resetSimulation(42);
+      setSimTime(new Date().toISOString());
       setActiveScenario("CLEAN_RUN");
       await fetchGlobalState();
     } catch (e) {

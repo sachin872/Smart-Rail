@@ -71,7 +71,7 @@ def get_health():
         "version": "3.1.0",
         "database": "SQLite (WAL Mode) OK" if db_ok else "DB_ERROR",
         "active_scenario": simulator.active_scenario,
-        "sim_time": simulator.clock.isoformat(),
+        "sim_time": simulator.get_clock().isoformat(),
         "active_trains": len(simulator.train_states),
         "data_quality_metrics": data_cleaner.metrics
     }
