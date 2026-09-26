@@ -16,7 +16,7 @@ class TrainSimulator:
         self.sim_speed_multiplier = 1.0
         self.current_seed = 42
         self.active_scenario = "CLEAN_RUN"
-        self.clock = datetime.fromisoformat("2026-09-26T16:10:00")
+        self.clock = datetime.now()
         self.train_states: Dict[str, Dict[str, Any]] = {}
         self.subscribers: List[Any] = []
         self.reset_simulation(seed=42)
@@ -24,15 +24,15 @@ class TrainSimulator:
     def reset_simulation(self, seed: int = 42):
         self.current_seed = seed
         random.seed(seed)
-        self.clock = datetime.fromisoformat("2026-09-26T16:10:00")
+        self.clock = datetime.now()
         self.active_scenario = "CLEAN_RUN"
         data_cleaner.reset_metrics()
 
         # Initialize trains on corridor
-        # T101 (Departed ST01 @ 16:05, currently on B01 heading to ST02)
-        # T102 (At ST01 preparing dep @ 16:15)
-        # T103 (At ST02 scheduled dep @ 16:35)
-        # T104 (Departed ST04 on Down line @ 16:30 heading to ST03)
+        # T101 (Departed ST01 5 min ago, currently on B01 heading to ST02)
+        # T102 (At ST01 preparing dep in 5 min)
+        # T103 (At ST02 scheduled dep in 25 min)
+        # T104 (Departed ST04 on Down line 20 min ago heading to ST03)
         st01 = rail_graph.get_station("ST01") or {"lat": 19.0760, "lon": 72.8777}
         st02 = rail_graph.get_station("ST02") or {"lat": 19.0178, "lon": 73.0160}
         st03 = rail_graph.get_station("ST03") or {"lat": 18.9894, "lon": 73.1175}
@@ -117,9 +117,35 @@ class TrainSimulator:
             }
         }
 
-        # Clear events in DB and re-seed
+        # Clear events in DB and re-seed dynamic timetable
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Seed timetable relative to current live simulation clock
+        timetable_data = [
+            # T101
+            ("T101", "ST01", 1, "", (self.clock - timedelta(minutes=5)).strftime("%H:%M"), "EXPRESS", 1, 0, 0),
+            ("T101", "ST02", 2, (self.clock + timedelta(minutes=15)).strftime("%H:%M"), (self.clock + timedelta(minutes=17)).strftime("%H:%M"), "EXPRESS", 1, 0, 15),
+            ("T101", "ST03", 3, (self.clock + timedelta(minutes=40)).strftime("%H:%M"), (self.clock + timedelta(minutes=42)).strftime("%H:%M"), "EXPRESS", 1, 0, 33),
+            ("T101", "ST04", 4, (self.clock + timedelta(minutes=80)).strftime("%H:%M"), "", "EXPRESS", 1, 0, 63),
+            # T102
+            ("T102", "ST01", 1, "", (self.clock + timedelta(minutes=5)).strftime("%H:%M"), "PASSENGER", 2, 0, 0),
+            ("T102", "ST02", 2, (self.clock + timedelta(minutes=28)).strftime("%H:%M"), (self.clock + timedelta(minutes=30)).strftime("%H:%M"), "PASSENGER", 2, 0, 15),
+            ("T102", "ST03", 3, (self.clock + timedelta(minutes=56)).strftime("%H:%M"), (self.clock + timedelta(minutes=58)).strftime("%H:%M"), "PASSENGER", 2, 0, 33),
+            # T103
+            ("T103", "ST02", 1, "", (self.clock + timedelta(minutes=25)).strftime("%H:%M"), "PASSENGER", 2, 0, 15),
+            ("T103", "ST03", 2, (self.clock + timedelta(minutes=50)).strftime("%H:%M"), (self.clock + timedelta(minutes=52)).strftime("%H:%M"), "PASSENGER", 2, 0, 33),
+            # T104
+            ("T104", "ST04", 1, "", (self.clock + timedelta(minutes=20)).strftime("%H:%M"), "EXPRESS", 1, 0, 0),
+            ("T104", "ST03", 2, (self.clock + timedelta(minutes=55)).strftime("%H:%M"), (self.clock + timedelta(minutes=57)).strftime("%H:%M"), "EXPRESS", 1, 0, 30),
+            ("T104", "ST02", 3, (self.clock + timedelta(minutes=80)).strftime("%H:%M"), (self.clock + timedelta(minutes=82)).strftime("%H:%M"), "EXPRESS", 1, 0, 48),
+            ("T104", "ST01", 4, (self.clock + timedelta(minutes=105)).strftime("%H:%M"), "", "EXPRESS", 1, 0, 63),
+        ]
+        cursor.executemany(
+            "INSERT OR REPLACE INTO timetable (train_id, station_code, seq, arr, dep, class, priority, day_offset, distance_km) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            timetable_data
+        )
+
         cursor.execute("UPDATE events SET active = 0")
         cursor.execute("DELETE FROM resource_reservations")
         cursor.execute("DELETE FROM conflicts")

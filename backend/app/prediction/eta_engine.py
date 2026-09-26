@@ -11,9 +11,11 @@ class ETAEngine:
     def __init__(self):
         pass
 
-    def parse_time_str(self, t_str: str, base_date_str: str = "2026-09-26") -> datetime:
+    def parse_time_str(self, t_str: str, base_date_str: Optional[str] = None) -> datetime:
+        if base_date_str is None:
+            base_date_str = datetime.now().strftime("%Y-%m-%d")
         if not t_str:
-            return datetime.fromisoformat(f"{base_date_str}T16:00:00")
+            return datetime.fromisoformat(f"{base_date_str}T12:00:00")
         if "T" in t_str:
             return datetime.fromisoformat(t_str)
         parts = t_str.split(":")
@@ -84,7 +86,11 @@ class ETAEngine:
             w = weather_provider.get_weather(19.0760, 72.8777)
             weather_rain_mm = w.rain_mm
 
-        now_dt = datetime.now()
+        try:
+            from backend.app.simulator.engine import simulator
+            now_dt = simulator.clock
+        except Exception:
+            now_dt = datetime.now()
         base_date = now_dt.strftime("%Y-%m-%d")
 
         # Map segments between sequential stops

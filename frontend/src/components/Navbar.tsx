@@ -47,9 +47,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const formatTime = (iso: string) => {
     try {
       const parts = iso.split("T");
-      return parts[1]?.substring(0, 8) || "16:10:00";
+      return parts[1]?.substring(0, 8) || new Date().toTimeString().substring(0, 8);
     } catch {
-      return "16:10:00";
+      return new Date().toTimeString().substring(0, 8);
     }
   };
 

@@ -10,7 +10,7 @@ import { api, type TrainState } from "./api";
 
 export function App() {
   const [activeTab, setActiveTab] = useState<string>("passenger");
-  const [simTime, setSimTime] = useState<string>("2026-09-26T16:10:00");
+  const [simTime, setSimTime] = useState<string>(() => new Date().toISOString());
   const [activeScenario, setActiveScenario] = useState<string>("CLEAN_RUN");
   const [trains, setTrains] = useState<TrainState[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -19,7 +19,7 @@ export function App() {
   const fetchGlobalState = async () => {
     try {
       const health = await api.getHealth();
-      setSimTime(health.sim_time || "2026-09-26T16:10:00");
+      setSimTime(health.sim_time || new Date().toISOString());
       setActiveScenario(health.active_scenario || "CLEAN_RUN");
       const trainsRes = await api.getTrains();
       setTrains(trainsRes.data || []);
