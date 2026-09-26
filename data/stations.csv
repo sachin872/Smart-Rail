@@ -1,0 +1,5 @@
+station_code,station_name,lat,lon,zone,division
+ST01,Station A (Mumbai CST),19.0760,72.8777,CR,BB
+ST02,Station B (Kalyan Jn),19.0178,73.0160,CR,BB
+ST03,Station C (Karjat Jn),18.9894,73.1175,CR,BB
+ST04,Station D (Lonavala),18.7500,73.4200,CR,BB

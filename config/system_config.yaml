@@ -1,0 +1,45 @@
+# SMART RAIL AI - Revision 3.1 System Configuration
+# All railway simulation assumptions are explicitly registered here.
+
+version: "3.1.0"
+environment: "development"
+
+railway_assumptions:
+  headway_min: 3.0                     # Minimum safe headway between trains in minutes (simulation assumption)
+  red_signal_wait_min: 4.0             # Median wait time at red signal (minutes)
+  rain_speed_factor: 0.82              # Simulator calibrated rain speed factor (SIM_CALIBRATED)
+  lc_closure_min: 3.0                  # Level crossing gate closure delay (minutes)
+  unscheduled_stop_min: 8.0            # Unscheduled technical halt (minutes)
+  min_dwell_min_express: 2.0           # Minimum scheduled station dwell for Express
+  min_dwell_min_passenger: 3.0         # Minimum scheduled station dwell for Passenger
+  max_propagation_depth: 5             # Maximum cascade hops in network propagation graph
+  single_track_buffer_min: 2.0         # Buffer before opposite direction release on single track
+
+data_quality_rules:
+  stale_after_s: 90                    # GPS positions older than 90s marked STALE
+  lost_after_s: 600                    # GPS positions older than 600s marked LOST
+  max_off_track_m: 150.0               # Max deviation in meters before OFF_TRACK flag
+  max_speed_kmh: 160.0                 # Max plausible coaching train speed (rejects impossible jumps)
+  conformal_alpha: 0.20                # Target 80% coverage interval for ETA low/high window
+  ewma_alpha: 0.20                     # Exponentially weighted moving average for online bias correction
+
+rate_limiting:
+  enabled: true
+  read_rps: 30                         # Public read requests per second per client
+  write_rps: 10                        # Controller event requests per second
+  admin_rps: 5                         # Admin retrain/reset requests per second
+  window_seconds: 1.0
+
+resource_thresholds:
+  platform_conflict_buffer_min: 3.0    # Warning if two trains scheduled within this buffer on same platform
+  coach_cleaning_turnaround_min: 30.0  # Minimum rake turnaround buffer for pit line cleaning
+  crew_handover_min: 15.0              # Minimum crew briefing/handover window
+  feeder_dispatch_threshold_min: 10.0  # Alert feeder bus/shuttle if arrival drifts by >10 min
+
+provenance:
+  simulator_label: "Corridor Operations Baseline"
+  permitted_sources:
+    - "CRIS NTES/RTIS Adapter Interface (Credential-gated skeleton)"
+    - "Open Government Data (data.gov.in timetable reference)"
+    - "Open-Meteo Weather API (Permitted open tier with caching)"
+    - "OpenStreetMap / OpenRailwayMap geometry reference"

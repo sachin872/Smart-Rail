@@ -1,0 +1,4 @@
+block_id,from_station,to_station,length_km,max_speed,line,track_count,is_single_track
+B01,ST01,ST02,15,80,UP,2,0
+B02,ST02,ST03,18,75,UP,1,1
+B03,ST03,ST04,30,80,UP,2,0

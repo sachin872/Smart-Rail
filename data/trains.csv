@@ -1,0 +1,5 @@
+train_id,train_name,class,priority,rake_id
+T101,Deccan Superfast,EXPRESS,1,RAKE_01
+T102,Local Commuter,PASSENGER,2,RAKE_02
+T103,Karjat Shuttle,PASSENGER,2,RAKE_03
+T104,Pragati Express (Down),EXPRESS,1,RAKE_04
