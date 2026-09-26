@@ -8,9 +8,14 @@ import { LearningPage } from "./pages/LearningPage";
 import { DataSourcesPage } from "./pages/DataSourcesPage";
 import { api, type TrainState } from "./api";
 
+const getLocalISOString = (d: Date = new Date()) => {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+};
+
 export function App() {
   const [activeTab, setActiveTab] = useState<string>("passenger");
-  const [simTime, setSimTime] = useState<string>(() => new Date().toISOString());
+  const [simTime, setSimTime] = useState<string>(() => getLocalISOString());
   const [activeScenario, setActiveScenario] = useState<string>("CLEAN_RUN");
   const [trains, setTrains] = useState<TrainState[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -21,7 +26,7 @@ export function App() {
   useEffect(() => {
     const timer = setInterval(() => {
       if (!isPlaying && !isStepped && activeScenario === "CLEAN_RUN") {
-        setSimTime(new Date().toISOString());
+        setSimTime(getLocalISOString());
       }
     }, 1000);
     return () => clearInterval(timer);
@@ -31,7 +36,7 @@ export function App() {
     try {
       const health = await api.getHealth();
       if (isPlaying || isStepped || health.active_scenario !== "CLEAN_RUN") {
-        setSimTime(health.sim_time || new Date().toISOString());
+        setSimTime(health.sim_time || getLocalISOString());
       }
       setActiveScenario(health.active_scenario || "CLEAN_RUN");
       const trainsRes = await api.getTrains();
@@ -64,7 +69,7 @@ export function App() {
       setIsPlaying(false);
       setIsStepped(false);
       await api.resetSimulation(42);
-      setSimTime(new Date().toISOString());
+      setSimTime(getLocalISOString());
       setActiveScenario("CLEAN_RUN");
       await fetchGlobalState();
     } catch (e) {

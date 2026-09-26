@@ -43,13 +43,25 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "sources", label: "Data Governance", icon: Database },
   ];
 
-  // Format Sim Time HH:MM:SS
+  // Format Sim Time HH:MM:SS in Local Time
   const formatTime = (iso: string) => {
     try {
+      if (!iso) {
+        return new Date().toLocaleTimeString("en-GB", { hour12: false });
+      }
       const parts = iso.split("T");
-      return parts[1]?.substring(0, 8) || new Date().toTimeString().substring(0, 8);
+      if (parts[1]) {
+        if (iso.endsWith("Z") || (!iso.includes("+") && parts[1].length > 8 && !iso.includes("-", 10))) {
+          const d = new Date(iso);
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleTimeString("en-GB", { hour12: false });
+          }
+        }
+        return parts[1].substring(0, 8);
+      }
+      return new Date().toLocaleTimeString("en-GB", { hour12: false });
     } catch {
-      return new Date().toTimeString().substring(0, 8);
+      return new Date().toLocaleTimeString("en-GB", { hour12: false });
     }
   };
 
