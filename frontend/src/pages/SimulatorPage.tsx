@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { Sliders, Play, RotateCcw, AlertTriangle, ShieldCheck, CloudRain, Gauge, Construction, Radio, Zap, Activity } from "lucide-react";
+import {
+  Sliders,
+  Play,
+  RotateCcw,
+  AlertTriangle,
+  ShieldCheck,
+  CloudRain,
+  Gauge,
+  Construction,
+  Radio,
+  Zap,
+  Activity,
+  CheckCircle2
+} from "lucide-react";
 import { api } from "../api";
 
 interface SimulatorPageProps {
@@ -60,59 +73,136 @@ export const SimulatorPage: React.FC<SimulatorPageProps> = ({ simTime, activeSce
     lost: 0
   };
 
+  const scenarios = [
+    {
+      id: "CLEAN_RUN",
+      title: "Normal Baseline Run",
+      badge: "Nominal",
+      desc: "All trains moving on normal sectional running time with zero disruptions.",
+      icon: ShieldCheck,
+      color: "border-emerald-200 hover:border-emerald-500 bg-emerald-50/40 text-emerald-950",
+      accent: "text-emerald-600"
+    },
+    {
+      id: "RED_SIGNAL",
+      title: "Red Signal Hold (B02)",
+      badge: "Signal Wait",
+      desc: "Forces train T101 to halt at SIG_B02 for 6 minutes. Traces instant cause attribution.",
+      icon: AlertTriangle,
+      color: "border-rose-200 hover:border-rose-500 bg-rose-50/40 text-rose-950",
+      accent: "text-rose-600"
+    },
+    {
+      id: "HEAVY_RAIN",
+      title: "Monsoon Track Wetting",
+      badge: "Weather Control",
+      desc: "Applies calibrated 0.82 speed reduction factor on corridor sections B02 & B03.",
+      icon: CloudRain,
+      color: "border-blue-200 hover:border-blue-500 bg-blue-50/40 text-blue-950",
+      accent: "text-blue-600"
+    },
+    {
+      id: "SPEED_RESTRICTION",
+      title: "Temporary Speed Limit",
+      badge: "TSR Caution",
+      desc: "Imposes temporary 40 km/h speed limit on block B02 for track caution.",
+      icon: Gauge,
+      color: "border-amber-200 hover:border-amber-500 bg-amber-50/40 text-amber-950",
+      accent: "text-amber-600"
+    },
+    {
+      id: "LC_CLOSURE",
+      title: "Level Crossing Gate Hold",
+      badge: "Road Traffic",
+      desc: "Simulates gate LC_02 closed for 4 min to clear highway congestion.",
+      icon: Construction,
+      color: "border-orange-200 hover:border-orange-500 bg-orange-50/40 text-orange-950",
+      accent: "text-orange-600"
+    },
+    {
+      id: "UNSCHEDULED_STOP",
+      title: "Unscheduled Technical Halt",
+      badge: "Rolling Stock",
+      desc: "Injects an 8-minute unscheduled technical halt on Express T101.",
+      icon: Activity,
+      color: "border-rose-200 hover:border-rose-500 bg-rose-50/40 text-rose-950",
+      accent: "text-rose-600"
+    },
+    {
+      id: "GPS_DEGRADED",
+      title: "Degraded GPS Fault Test",
+      badge: "Data Quality",
+      desc: "Simulates delayed and jittery GPS reports to test uncertainty window widening.",
+      icon: Radio,
+      color: "border-purple-200 hover:border-purple-500 bg-purple-50/40 text-purple-950",
+      accent: "text-purple-600"
+    },
+    {
+      id: "SINGLE_TRACK_CROSSING",
+      title: "Single-Track Opposing Conflict",
+      badge: "Bi-directional",
+      desc: "Simulates opposing train competition on single-track section B02 at Karjat loop.",
+      icon: Sliders,
+      color: "border-indigo-200 hover:border-indigo-500 bg-indigo-50/40 text-indigo-950",
+      accent: "text-indigo-600"
+    },
+  ];
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       {/* Header & Controls */}
-      <div className="bg-slate-900 text-white rounded-xl p-5 border border-slate-800 flex flex-wrap items-center justify-between gap-4 shadow-md">
+      <div className="bg-slate-900 text-white rounded-3xl p-6 md:p-8 border border-slate-800 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Sliders className="w-6 h-6 text-blue-400" />
-            Railway Operational Scenario Simulator & Laboratory
-          </h2>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-400">
+            <Sliders className="w-4 h-4" />
+            Operational Scenario Laboratory
+          </div>
+          <h1 className="text-xl md:text-2xl font-black text-white mt-1">
+            Corridor Disruption & Fault Injection Simulator
+          </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Inject controlled railway disruptions, verify cause attribution, test data fault resilience, and inspect ground truth.
+            Test how Smart Rail AI responds dynamically to real-world disruptions, signal holds, and sensor faults.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={handleStep}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-md"
+            className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer shadow-lg shadow-blue-600/30"
           >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            Step Clock (+1 Min)
+            <Play className="w-4 h-4 fill-current" />
+            <span>Step Clock (+1m)</span>
           </button>
           <button
             onClick={handleReset}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border border-slate-700"
+            className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer border border-slate-700 shadow-sm"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset to Seed 42
+            <RotateCcw className="w-4 h-4" />
+            <span>Reset (Seed 42)</span>
           </button>
         </div>
       </div>
 
       {/* Disruption Scenarios Grid */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-          <Zap className="w-4 h-4 text-amber-500" />
-          Pre-Seeded Operational Disruption Catalogue
-        </h3>
-        <p className="text-xs text-slate-500">
-          Click any scenario to inject live into the running simulation and observe instant ETA window and reason updates across all screens:
-        </p>
+      <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <Zap className="w-5 h-5 text-amber-500" />
+              Pre-Configured Operational Scenarios
+            </h2>
+            <p className="text-xs text-slate-500">
+              Click any scenario to inject live into the corridor and watch the ETAs and reasons adjust instantly
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
-          {[
-            { id: "CLEAN_RUN", title: "🟢 Normal Run", desc: "Optimal nominal corridor running on schedule.", icon: ShieldCheck, color: "hover:border-emerald-500" },
-            { id: "RED_SIGNAL", title: "🔴 Red Signal (B02)", desc: "Halts T101 at SIG_B02 for 6 min; adds wait reason.", icon: AlertTriangle, color: "hover:border-rose-500" },
-            { id: "HEAVY_RAIN", title: "🌧️ Monsoon Rain", desc: "Monsoon track wetting (Calibrated 0.82 speed factor).", icon: CloudRain, color: "hover:border-blue-500" },
-            { id: "SPEED_RESTRICTION", title: "⚠️ Speed Restriction", desc: "40 km/h temporary speed restriction on Block B02.", icon: Gauge, color: "hover:border-amber-500" },
-            { id: "LC_CLOSURE", title: "🚧 Level Crossing Closure", desc: "Gate LC_02 closed for 4 min; holds approaching train.", icon: Construction, color: "hover:border-orange-500" },
-            { id: "UNSCHEDULED_STOP", title: "🛑 Unscheduled Halt", desc: "8 min technical stop injected for express service T101.", icon: Activity, color: "hover:border-rose-500" },
-            { id: "GPS_DEGRADED", title: "🛰️ GPS Degraded Fault", desc: "Injected GPS jitter & staleness; widens uncertainty window.", icon: Radio, color: "hover:border-purple-500" },
-            { id: "SINGLE_TRACK_CROSSING", title: "↔️ Single Track Conflict", desc: "Bi-directional crossing contention between T101 and T104.", icon: Sliders, color: "hover:border-indigo-500" },
-          ].map((item) => {
+          <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full w-fit">
+            Active: <strong className="text-blue-600">{activeScenario.replace(/_/g, " ")}</strong>
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+          {scenarios.map((item) => {
             const Icon = item.icon;
             const isSelected = activeScenario === item.id;
             return (
@@ -120,24 +210,32 @@ export const SimulatorPage: React.FC<SimulatorPageProps> = ({ simTime, activeSce
                 key={item.id}
                 disabled={injecting}
                 onClick={() => handleScenario(item.id)}
-                className={`p-4 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${item.color} ${
+                className={`p-5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between space-y-3 ${item.color} ${
                   isSelected
-                    ? "bg-blue-50/80 border-blue-500 ring-2 ring-blue-400/40 shadow-sm"
-                    : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+                    ? "ring-2 ring-blue-500 shadow-md shadow-blue-500/10 scale-[1.02]"
+                    : "hover:shadow-sm"
                 }`}
               >
                 <div>
-                  <div className="font-bold text-sm text-slate-800 flex items-center justify-between">
-                    <span>{item.title}</span>
-                    <Icon className="w-4 h-4 text-slate-500" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-white/80 border border-black/5">
+                      {item.badge}
+                    </span>
+                    <Icon className={`w-5 h-5 ${item.accent}`} />
                   </div>
-                  <p className="text-xs text-slate-500 mt-2 leading-relaxed">{item.desc}</p>
+                  <h3 className="font-extrabold text-sm text-slate-900 mt-2.5">{item.title}</h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">{item.desc}</p>
                 </div>
-                {isSelected && (
-                  <span className="mt-3 inline-block text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded w-fit">
-                    ACTIVE IN SIMULATOR
-                  </span>
-                )}
+
+                <div className="pt-2 border-t border-black/5 flex items-center justify-between text-[11px] font-bold">
+                  {isSelected ? (
+                    <span className="text-blue-700 flex items-center gap-1 font-mono">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> ACTIVE IN SIM
+                    </span>
+                  ) : (
+                    <span className="text-slate-500 hover:text-slate-800">Click to Trigger &rarr;</span>
+                  )}
+                </div>
               </button>
             );
           })}
@@ -145,30 +243,35 @@ export const SimulatorPage: React.FC<SimulatorPageProps> = ({ simTime, activeSce
       </div>
 
       {/* Data Quality & Anti-Crash Telemetry */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <Radio className="w-4 h-4 text-emerald-600" />
-            Data Quality Layer & Anti-Crash Pipeline Telemetry
-          </span>
-          <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-            Pipeline Resilient: Zero Unhandled Exceptions
-          </span>
-        </h3>
+      <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <Radio className="w-5 h-5 text-emerald-600" />
+              Data Quality Pipeline & Anti-Crash Telemetry
+            </h2>
+            <p className="text-xs text-slate-500">Live counts of cleaned, validated, snapped, and filtered sensor events</p>
+          </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full w-fit flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            Pipeline Healthy (Zero Unhandled Crashes)
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 pt-2">
           {[
             { label: "Total Ingested", val: qualityMetrics.total_events, color: "text-slate-900", bg: "bg-slate-50" },
-            { label: "Accepted Clean", val: qualityMetrics.accepted, color: "text-emerald-700", bg: "bg-emerald-50/70" },
-            { label: "Duplicate Dropped", val: qualityMetrics.duplicate_or_out_of_order, color: "text-amber-700", bg: "bg-amber-50/70" },
+            { label: "Clean Accepted", val: qualityMetrics.accepted, color: "text-emerald-700", bg: "bg-emerald-50/70" },
+            { label: "Duplicates Dropped", val: qualityMetrics.duplicate_or_out_of_order, color: "text-amber-700", bg: "bg-amber-50/70" },
             { label: "Jumps Blocked", val: qualityMetrics.impossible_jumps, color: "text-rose-700", bg: "bg-rose-50/70" },
             { label: "Off-Track Snapped", val: qualityMetrics.off_track, color: "text-purple-700", bg: "bg-purple-50/70" },
             { label: "Stale Flagged", val: qualityMetrics.stale, color: "text-amber-700", bg: "bg-amber-50/70" },
             { label: "Lost Fallback", val: qualityMetrics.lost, color: "text-rose-700", bg: "bg-rose-50/70" },
           ].map((m, i) => (
-            <div key={i} className={`${m.bg} border border-slate-200/80 rounded-xl p-3 text-center`}>
-              <div className="text-[11px] font-bold text-slate-500 uppercase">{m.label}</div>
-              <div className={`text-xl font-mono font-black mt-1 ${m.color}`}>{m.val}</div>
+            <div key={i} className={`${m.bg} border border-slate-200/80 rounded-2xl p-3.5 text-center flex flex-col justify-between`}>
+              <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">{m.label}</div>
+              <div className={`text-xl font-mono font-black mt-2 ${m.color}`}>{m.val}</div>
             </div>
           ))}
         </div>
