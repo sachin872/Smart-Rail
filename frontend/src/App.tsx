@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Navbar } from "./components/Navbar";
 import { PassengerPage } from "./pages/PassengerPage";
 import { StationBoardPage } from "./pages/StationBoardPage";
@@ -13,6 +13,8 @@ export function App() {
   const [simTime, setSimTime] = useState<string>("2026-09-26T16:10:00");
   const [activeScenario, setActiveScenario] = useState<string>("CLEAN_RUN");
   const [trains, setTrains] = useState<TrainState[]>([]);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const playIntervalRef = useRef<any>(null);
 
   const fetchGlobalState = async () => {
     try {
@@ -45,6 +47,7 @@ export function App() {
 
   const handleReset = async () => {
     try {
+      setIsPlaying(false);
       const res = await api.resetSimulation(42);
       setSimTime(res.sim_time);
       setActiveScenario("CLEAN_RUN");
@@ -54,6 +57,28 @@ export function App() {
     }
   };
 
+  const toggleAutoPlay = () => {
+    setIsPlaying((prev) => !prev);
+  };
+
+  // Continuous Auto-Play Simulation loop
+  useEffect(() => {
+    if (isPlaying) {
+      playIntervalRef.current = setInterval(() => {
+        handleStep();
+      }, 2500); // 1 virtual minute every 2.5 seconds
+    } else {
+      if (playIntervalRef.current) {
+        clearInterval(playIntervalRef.current);
+      }
+    }
+    return () => {
+      if (playIntervalRef.current) {
+        clearInterval(playIntervalRef.current);
+      }
+    };
+  }, [isPlaying]);
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
       <Navbar
@@ -61,6 +86,8 @@ export function App() {
         setActiveTab={setActiveTab}
         simTime={simTime}
         scenario={activeScenario}
+        isPlaying={isPlaying}
+        onTogglePlay={toggleAutoPlay}
         onStep={handleStep}
         onReset={handleReset}
       />

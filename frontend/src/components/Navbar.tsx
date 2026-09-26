@@ -8,7 +8,9 @@ import {
   Database,
   RotateCcw,
   Play,
-  Clock
+  Pause,
+  Clock,
+  ChevronRight
 } from "lucide-react";
 
 interface NavbarProps {
@@ -16,6 +18,8 @@ interface NavbarProps {
   setActiveTab: (tab: string) => void;
   simTime: string;
   scenario: string;
+  isPlaying: boolean;
+  onTogglePlay: () => void;
   onStep: () => void;
   onReset: () => void;
 }
@@ -25,6 +29,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   simTime,
   scenario,
+  isPlaying,
+  onTogglePlay,
   onStep,
   onReset,
 }) => {
@@ -102,16 +108,30 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
 
-          {/* Simulation Step / Reset Action Buttons */}
+          {/* Simulation Live Play / Step / Reset Action Buttons */}
           <div className="flex items-center space-x-1.5">
             <button
+              onClick={onTogglePlay}
+              className={`px-3 py-1 rounded-md text-xs font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer ${
+                isPlaying
+                  ? "bg-amber-600 hover:bg-amber-500 text-white animate-pulse"
+                  : "bg-emerald-600 hover:bg-emerald-500 text-white"
+              }`}
+              title={isPlaying ? "Pause automatic simulation" : "Start continuous automatic simulation"}
+            >
+              {isPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
+              <span>{isPlaying ? "Pause" : "Auto-Run"}</span>
+            </button>
+
+            <button
               onClick={onStep}
-              className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition shadow-sm cursor-pointer"
+              className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition shadow-sm cursor-pointer"
               title="Advance virtual train movement by 1 minute"
             >
-              <Play className="w-3 h-3 fill-current" />
-              <span>Step +1m</span>
+              <ChevronRight className="w-3 h-3" />
+              <span>+1m</span>
             </button>
+
             <button
               onClick={onReset}
               className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition border border-slate-700 cursor-pointer"
