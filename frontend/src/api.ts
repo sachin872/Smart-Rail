@@ -673,12 +673,12 @@ export const api = {
     } catch {
       // Offline fallback: verify against known default DB seeds
       const valid: Record<string, string> = {
-        "cr-dispatch-9401": "admin123",
-        "cr-chief-01": "rail2026",
-        "admin": "admin123"
+        "cr-dispatch-9401": "sachin123",
+        "cr-chief-01": "sachin123",
+        "admin": "sachin123"
       };
       const cleanUser = username.trim().toLowerCase();
-      if (valid[cleanUser] === password.trim() || password.trim() === "admin123" || password.trim() === "rail2026") {
+      if (valid[cleanUser] === password.trim() || password.trim() === "sachin123") {
         return {
           success: true,
           role: "controller",

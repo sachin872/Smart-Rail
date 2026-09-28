@@ -152,8 +152,8 @@ def test_role_authorization_and_rate_limiting():
     assert rate_limited or r.status_code == 200
 
 def test_database_realtime_auth_and_password_change():
-    # 1. Valid login
-    res = client.post("/api/v1/auth/login", json={"username": "CR-DISPATCH-9401", "password": "admin123"})
+    # 1. Valid login with sachin123
+    res = client.post("/api/v1/auth/login", json={"username": "CR-DISPATCH-9401", "password": "sachin123"})
     assert res.status_code == 200
     assert res.json()["success"] is True
     assert res.json()["role"] == "controller"
@@ -165,14 +165,14 @@ def test_database_realtime_auth_and_password_change():
     # 3. Change password in database in real time
     res_chg = client.post(
         "/api/v1/auth/change-password",
-        json={"username": "CR-DISPATCH-9401", "old_password": "admin123", "new_password": "newpassword2026"},
+        json={"username": "CR-DISPATCH-9401", "old_password": "sachin123", "new_password": "newpassword2026"},
         headers={"X-User-Role": "controller"}
     )
     assert res_chg.status_code == 200
     assert res_chg.json()["success"] is True
 
     # 4. Old password no longer works
-    res_old = client.post("/api/v1/auth/login", json={"username": "CR-DISPATCH-9401", "password": "admin123"})
+    res_old = client.post("/api/v1/auth/login", json={"username": "CR-DISPATCH-9401", "password": "sachin123"})
     assert res_old.status_code == 401
 
     # 5. New password works immediately in real time
@@ -183,6 +183,6 @@ def test_database_realtime_auth_and_password_change():
     # Restore default password for test idempotency
     client.post(
         "/api/v1/auth/change-password",
-        json={"username": "CR-DISPATCH-9401", "old_password": "newpassword2026", "new_password": "admin123"},
+        json={"username": "CR-DISPATCH-9401", "old_password": "newpassword2026", "new_password": "sachin123"},
         headers={"X-User-Role": "controller"}
     )

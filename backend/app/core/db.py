@@ -374,13 +374,11 @@ def seed_database(conn: sqlite3.Connection):
     """)
 
     # Seed Default Admin & Controller Users
-    # Hashes generated with SHA-256 for passwords:
-    # "admin123" -> 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
-    # "rail2026" -> 643e2f5b66d4a5840fd1f26f633630f57618a8dbb8e906b3252a16dcf456f4d3
+    # Hashes generated with SHA-256 for password "sachin123" -> 857c43043be3dad3225f51e5f2ae0d99e8e663569c13e36f18c1b0898592e06d
     admin_users = [
-        ("CR-DISPATCH-9401", "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", "controller", "Senior Section Controller", "CR-BB (Mumbai)", "2026-09-26T10:00:00", None),
-        ("CR-CHIEF-01", "643e2f5b66d4a5840fd1f26f633630f57618a8dbb8e906b3252a16dcf456f4d3", "admin", "Chief Train Controller (OCC)", "CR-BB (Mumbai)", "2026-09-26T10:00:00", None),
-        ("ADMIN", "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", "admin", "System Operations Administrator", "CR Central HQ", "2026-09-26T10:00:00", None)
+        ("CR-DISPATCH-9401", "857c43043be3dad3225f51e5f2ae0d99e8e663569c13e36f18c1b0898592e06d", "controller", "Senior Section Controller", "CR-BB (Mumbai)", "2026-09-26T10:00:00", None),
+        ("CR-CHIEF-01", "857c43043be3dad3225f51e5f2ae0d99e8e663569c13e36f18c1b0898592e06d", "admin", "Chief Train Controller (OCC)", "CR-BB (Mumbai)", "2026-09-26T10:00:00", None),
+        ("ADMIN", "857c43043be3dad3225f51e5f2ae0d99e8e663569c13e36f18c1b0898592e06d", "admin", "System Operations Administrator", "CR Central HQ", "2026-09-26T10:00:00", None)
     ]
     cursor.executemany(
         "INSERT OR REPLACE INTO admin_users (username, password_hash, role, full_name, division, created_at, last_login) VALUES (?, ?, ?, ?, ?, ?, ?)",

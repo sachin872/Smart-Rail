@@ -39,12 +39,12 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
   };
 
   const handleQuickDemoLogin = async () => {
-    setPin("admin123");
+    setPin("sachin123");
     setOperatorId("CR-DISPATCH-9401");
     setLoading(true);
     setError("");
     try {
-      const res = await api.login("CR-DISPATCH-9401", "admin123");
+      const res = await api.login("CR-DISPATCH-9401", "sachin123");
       if (res.success) {
         sessionStorage.setItem("smart_rail_admin_auth", "true");
         sessionStorage.setItem("smart_rail_admin_role", "Senior Section Controller");
@@ -128,7 +128,6 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
                   setPin(e.target.value);
                   if (error) setError("");
                 }}
-                placeholder="Enter Official PIN (e.g. admin123)"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-indigo-500 transition pr-10"
                 required
                 autoFocus
@@ -164,7 +163,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
             className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5"
           >
             <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>1-Click Controller Demo Login (PIN: admin123)</span>
+            <span>1-Click Controller Demo Login (PIN: sachin123)</span>
           </button>
         </div>
       </div>
