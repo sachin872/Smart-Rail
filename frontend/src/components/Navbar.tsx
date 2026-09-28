@@ -14,7 +14,9 @@ import {
   User,
   Shield,
   Volume2,
-  MapPin
+  MapPin,
+  Lock,
+  LogOut
 } from "lucide-react";
 
 interface NavbarProps {
@@ -28,6 +30,10 @@ interface NavbarProps {
   onTogglePlay: () => void;
   onStep: () => void;
   onReset: () => void;
+  isAuthorized: boolean;
+  adminRole: string;
+  onRequestAuth: () => void;
+  onLogoutAdmin: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -41,8 +47,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onTogglePlay,
   onStep,
   onReset,
+  isAuthorized,
+  adminRole,
+  onRequestAuth,
+  onLogoutAdmin,
 }) => {
-  // Tabs for Passenger / User Portal
+  // Tabs for Passenger / User Portal (Read-only, Passenger tools)
   const userTabs = [
     { id: "passenger", label: "Live Train ETA", icon: Train, badge: "Live" },
     { id: "station", label: "Station Display Board", icon: LayoutDashboard },
@@ -50,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "map", label: "Corridor Live Map", icon: MapPin },
   ];
 
-  // Tabs for Admin / Controller Portal
+  // Tabs for Admin / Controller Portal (Authority tools)
   const adminTabs = [
     { id: "control", label: "Traffic Control & Dispatch", icon: Activity, badge: "Advisory" },
     { id: "simulator", label: "Disruption Simulator", icon: Sliders, badge: "Scenario Lab" },
@@ -97,6 +107,17 @@ export const Navbar: React.FC<NavbarProps> = ({
     );
   };
 
+  const handleAdminPortalClick = () => {
+    if (!isAuthorized) {
+      onRequestAuth();
+    } else {
+      setPortal("admin");
+      if (userTabs.some((t) => t.id === activeTab)) {
+        setActiveTab("control");
+      }
+    }
+  };
+
   const currentTabs = portal === "user" ? userTabs : adminTabs;
 
   return (
@@ -121,7 +142,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Center Portal Switcher Toggle (User Panel vs Admin Panel) */}
+        {/* Center Portal Switcher Toggle (Passenger Portal vs Protected Admin Panel) */}
         <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
           <button
             onClick={() => {
@@ -138,26 +159,23 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <User className="w-3.5 h-3.5" />
             <span>Passenger Portal</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Live sync connected"></span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Live passenger feed"></span>
           </button>
 
           <button
-            onClick={() => {
-              setPortal("admin");
-              if (userTabs.some((t) => t.id === activeTab)) {
-                setActiveTab("control");
-              }
-            }}
+            onClick={handleAdminPortalClick}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer ${
               portal === "admin"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
             }`}
           >
-            <Shield className="w-3.5 h-3.5" />
+            {isAuthorized ? <Shield className="w-3.5 h-3.5 text-indigo-300" /> : <Lock className="w-3.5 h-3.5 text-amber-400" />}
             <span>Admin & Operations</span>
-            <span className="text-[9px] bg-indigo-900 text-indigo-300 border border-indigo-700 px-1 py-0.2 rounded font-mono font-semibold">
-              OCC
+            <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-semibold ${
+              isAuthorized ? "bg-indigo-900 text-indigo-200 border border-indigo-700" : "bg-amber-950 text-amber-300 border border-amber-800"
+            }`}>
+              {isAuthorized ? "OCC AUTH" : "PROTECTED"}
             </span>
           </button>
         </div>
@@ -179,39 +197,54 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
 
-          {/* Simulation Live Play / Step / Reset Action Buttons */}
-          <div className="flex items-center space-x-1.5">
-            <button
-              onClick={onTogglePlay}
-              className={`px-3 py-1 rounded-md text-xs font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer ${
-                isPlaying
-                  ? "bg-amber-600 hover:bg-amber-500 text-white animate-pulse"
-                  : "bg-emerald-600 hover:bg-emerald-500 text-white"
-              }`}
-              title={isPlaying ? "Pause automatic simulation" : "Start continuous automatic simulation"}
-            >
-              {isPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
-              <span>{isPlaying ? "Pause" : "Auto-Run"}</span>
-            </button>
+          {/* Authority-Only Simulation Controls (Visible when in Admin mode) */}
+          {portal === "admin" && isAuthorized ? (
+            <div className="flex items-center space-x-1.5">
+              <button
+                onClick={onTogglePlay}
+                className={`px-3 py-1 rounded-md text-xs font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer ${
+                  isPlaying
+                    ? "bg-amber-600 hover:bg-amber-500 text-white animate-pulse"
+                    : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                }`}
+                title={isPlaying ? "Pause automatic simulation" : "Start continuous automatic simulation"}
+              >
+                {isPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
+                <span>{isPlaying ? "Pause" : "Auto-Run"}</span>
+              </button>
 
-            <button
-              onClick={onStep}
-              className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition shadow-sm cursor-pointer"
-              title="Advance virtual train movement by 1 minute"
-            >
-              <ChevronRight className="w-3 h-3" />
-              <span>+1m</span>
-            </button>
+              <button
+                onClick={onStep}
+                className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition shadow-sm cursor-pointer"
+                title="Advance virtual train movement by 1 minute"
+              >
+                <ChevronRight className="w-3 h-3" />
+                <span>+1m</span>
+              </button>
 
-            <button
-              onClick={onReset}
-              className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition border border-slate-700 cursor-pointer"
-              title="Reset simulation to deterministic clean state"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span className="hidden sm:inline">Reset</span>
-            </button>
-          </div>
+              <button
+                onClick={onReset}
+                className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition border border-slate-700 cursor-pointer"
+                title="Reset simulation to deterministic clean state"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+
+              <button
+                onClick={onLogoutAdmin}
+                className="bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                title="Lock and sign out of Admin Deck"
+              >
+                <LogOut className="w-3 h-3" />
+                <span className="hidden sm:inline">Lock</span>
+              </button>
+            </div>
+          ) : (
+            <div className="hidden sm:flex items-center text-[11px] text-slate-400 font-mono bg-slate-950/80 px-2 py-1 rounded border border-slate-800">
+              <span>Public Transit Stream</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -253,10 +286,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Panel Mode Indicator Badge */}
         <div className="hidden md:flex items-center gap-2 text-[11px] font-mono pl-4 text-slate-400 whitespace-nowrap">
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            {portal === "user" ? "Passenger Portal Connected" : "Operations Central Connected"}
-          </span>
+          {portal === "admin" && isAuthorized ? (
+            <span className="flex items-center gap-1.5 text-indigo-300 bg-indigo-950/80 border border-indigo-800 px-2.5 py-0.5 rounded-full">
+              <Shield className="w-3 h-3 text-indigo-400" />
+              <span>{adminRole}</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Passenger Live Synced</span>
+            </span>
+          )}
         </div>
       </div>
     </header>

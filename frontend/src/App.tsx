@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Navbar } from "./components/Navbar";
+import { AdminAuthModal } from "./components/AdminAuthModal";
 import { PassengerPage } from "./pages/PassengerPage";
 import { StationBoardPage } from "./pages/StationBoardPage";
 import { AnnouncementsPage } from "./pages/AnnouncementsPage";
@@ -9,7 +10,7 @@ import { SimulatorPage } from "./pages/SimulatorPage";
 import { LearningPage } from "./pages/LearningPage";
 import { DataSourcesPage } from "./pages/DataSourcesPage";
 import { api, type TrainState } from "./api";
-import { AlertTriangle, ArrowRight, User, Shield } from "lucide-react";
+import { AlertTriangle, ArrowRight, User, Shield, Lock } from "lucide-react";
 
 const getLocalISOString = (d: Date = new Date()) => {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -24,6 +25,13 @@ export function App() {
   const [trains, setTrains] = useState<TrainState[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isStepped, setIsStepped] = useState<boolean>(false);
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(() => {
+    return sessionStorage.getItem("smart_rail_admin_auth") === "true";
+  });
+  const [adminRole, setAdminRole] = useState<string>(() => {
+    return sessionStorage.getItem("smart_rail_admin_role") || "Chief Section Controller";
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const playIntervalRef = useRef<any>(null);
 
   // Live real-time clock ticker: updates every second when in normal real-time mode
@@ -85,6 +93,27 @@ export function App() {
     setIsPlaying((prev) => !prev);
   };
 
+  const handleAuthSuccess = (role: string) => {
+    setIsAuthorized(true);
+    setAdminRole(role);
+    setIsAuthModalOpen(false);
+    setPortal("admin");
+    setActiveTab("control");
+  };
+
+  const handleLogoutAdmin = () => {
+    setIsAuthorized(false);
+    sessionStorage.removeItem("smart_rail_admin_auth");
+    sessionStorage.removeItem("smart_rail_admin_role");
+    sessionStorage.removeItem("smart_rail_admin_operator");
+    setPortal("user");
+    setActiveTab("passenger");
+  };
+
+  const handleRequestAuth = () => {
+    setIsAuthModalOpen(true);
+  };
+
   // Continuous Auto-Play Simulation loop
   useEffect(() => {
     if (isPlaying) {
@@ -116,9 +145,20 @@ export function App() {
         onTogglePlay={toggleAutoPlay}
         onStep={handleStep}
         onReset={handleReset}
+        isAuthorized={isAuthorized}
+        adminRole={adminRole}
+        onRequestAuth={handleRequestAuth}
+        onLogoutAdmin={handleLogoutAdmin}
       />
 
-      {/* Cross-Panel Interconnected Live Status Banner */}
+      {/* Password Authentication Modal for Admin Deck */}
+      <AdminAuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
+
+      {/* Cross-Panel Interconnected Live Status Banner in User Portal */}
       {portal === "user" && activeScenario !== "CLEAN_RUN" && (
         <div className="bg-amber-500 text-slate-950 px-4 py-2 text-xs font-bold shadow-sm border-b border-amber-600">
           <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
@@ -126,46 +166,93 @@ export function App() {
               <AlertTriangle className="w-4 h-4 text-slate-950 fill-current animate-bounce" />
               <span>
                 <strong>OPERATIONAL ADVISORY IN EFFECT:</strong> Traffic Controllers injected disruption:{" "}
-                <span className="font-mono underline">{activeScenario.replace(/_/g, " ")}</span>. Smart ETA forecasts are recalculating live arrival windows.
+                <span className="font-mono underline">{activeScenario.replace(/_/g, " ")}</span>. Smart ETA forecasts and station displays are actively adjusting.
               </span>
             </div>
             <button
               onClick={() => {
-                setPortal("admin");
-                setActiveTab("control");
+                if (isAuthorized) {
+                  setPortal("admin");
+                  setActiveTab("control");
+                } else {
+                  setIsAuthModalOpen(true);
+                }
               }}
               className="bg-slate-900 hover:bg-slate-800 text-white px-2.5 py-1 rounded text-[11px] font-bold flex items-center gap-1 transition cursor-pointer"
             >
-              <span>View Controller Action</span>
+              <span>{isAuthorized ? "View Controller Action" : "Controller Login"}</span>
               <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>
       )}
 
-      {portal === "admin" && (
+      {/* Admin Central Mode Top Status Banner */}
+      {portal === "admin" && isAuthorized && (
         <div className="bg-indigo-950 text-indigo-200 px-4 py-1.5 text-xs font-mono border-b border-indigo-900">
           <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Shield className="w-3.5 h-3.5 text-indigo-400" />
               <span>
-                <strong>OPERATIONS COMMAND ACTIVE:</strong> All controller dispatches directly update passenger ETAs and station boards in real time.
+                <strong>OPERATIONS COMMAND ACTIVE:</strong> Dispatches and scenario injections automatically update passenger ETAs and station boards in real time.
               </span>
             </div>
-            <button
-              onClick={() => {
-                setPortal("user");
-                setActiveTab("passenger");
-              }}
-              className="text-indigo-300 hover:text-white underline text-[11px] cursor-pointer flex items-center gap-1"
-            >
-              <User className="w-3 h-3" />
-              <span>Switch to Passenger View</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setPortal("user");
+                  setActiveTab("passenger");
+                }}
+                className="text-indigo-300 hover:text-white underline text-[11px] cursor-pointer flex items-center gap-1"
+              >
+                <User className="w-3 h-3" />
+                <span>Preview Passenger View</span>
+              </button>
+              <button
+                onClick={handleLogoutAdmin}
+                className="text-rose-400 hover:text-rose-300 text-[11px] cursor-pointer font-bold flex items-center gap-1"
+              >
+                <Lock className="w-3 h-3" />
+                <span>Lock Session</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
+      {/* Unauthorized Admin Access Guard Screen */}
+      {portal === "admin" && !isAuthorized && (
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-8 max-w-md w-full text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-800 mx-auto flex items-center justify-center">
+              <Lock className="w-8 h-8 text-amber-700" />
+            </div>
+            <h2 className="text-xl font-extrabold text-slate-900">
+              Admin & Control Room Protected
+            </h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              This area is restricted to authorized Railway Controllers, Chief Train Dispatchers, and Section Engineers. Passcode authentication is required to view and modify operational parameters.
+            </p>
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2"
+              >
+                <Shield className="w-4 h-4" />
+                <span>Enter Authority Passcode</span>
+              </button>
+              <button
+                onClick={() => setPortal("user")}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-xs transition cursor-pointer"
+              >
+                Return to Passenger Portal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
       <main className="flex-1 pb-12">
         {/* User Portal Pages */}
         {portal === "user" && (
@@ -177,8 +264,8 @@ export function App() {
           </>
         )}
 
-        {/* Admin / Operations Portal Pages */}
-        {portal === "admin" && (
+        {/* Admin / Operations Portal Pages (Accessible when authorized) */}
+        {portal === "admin" && isAuthorized && (
           <>
             {activeTab === "control" && <ControlRoomPage simTime={simTime} trains={trains} />}
             {activeTab === "simulator" && (
@@ -200,11 +287,11 @@ export function App() {
           <div className="flex items-center gap-2">
             <strong>SMART RAIL AI</strong> &bull;
             <span className="text-slate-500">
-              {portal === "user" ? "Passenger Portal Connected" : "Operations & Dispatch Deck Connected"}
+              {portal === "user" ? "Public Commuter Stream" : `Operations Control Room (${adminRole})`}
             </span>
           </div>
           <div className="text-slate-500 font-mono text-[11px]">
-            Real-Time Sync &bull; Multi-Station ETA &bull; Conformal Uncertainty &bull; Advisory What-If Decision Support
+            {isAuthorized ? "🔒 Authority Session Active" : "Public Mode Active"} &bull; Real-Time Sync &bull; Multi-Station ETA &bull; What-If Decision Support
           </div>
         </div>
       </footer>
