@@ -15,7 +15,7 @@ from backend.app.prediction.whatif import whatif_engine
 from backend.app.resources.resource_manager import resource_manager
 from backend.app.simulator.engine import simulator
 from backend.app.learning.learning_loop import learning_loop
-from backend.app.api.auth import require_role
+from backend.app.api.auth import require_role, authenticate_user, change_user_password, list_admin_users
 
 router = APIRouter(prefix="/api/v1")
 
@@ -52,6 +52,15 @@ class EventCreateRequest(BaseModel):
 class ScenarioRequest(BaseModel):
     scenario: str
     seed: int = 42
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class PasswordChangeRequest(BaseModel):
+    username: str
+    old_password: str
+    new_password: str
 
 # --- 1. System Health ---
 @router.get("/health")
@@ -338,3 +347,37 @@ async def websocket_trains(websocket: WebSocket):
         ws_manager.disconnect(websocket)
     except Exception:
         ws_manager.disconnect(websocket)
+
+# --- 13. Database-Backed Real-Time Authentication & Passcode Control ---
+@router.post("/auth/login")
+def login(req: LoginRequest):
+    user = authenticate_user(req.username, req.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid operator credentials. Password does not match database record."
+        )
+    return {
+        "success": True,
+        "token": f"bearer_{user['username'].lower()}_auth_token",
+        "operator_id": user["username"],
+        "role": user["role"],
+        "full_name": user["full_name"],
+        "division": user["division"]
+    }
+
+@router.post("/auth/change-password")
+def change_password(req: PasswordChangeRequest, role: str = Depends(require_role("controller"))):
+    result = change_user_password(req.username, req.old_password, req.new_password)
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result.get("error", "Failed to update password in database.")
+        )
+    return result
+
+@router.get("/auth/users")
+def get_admin_users(role: str = Depends(require_role("controller"))):
+    return {
+        "users": list_admin_users()
+    }

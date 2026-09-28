@@ -232,6 +232,16 @@ def init_db(seed_from_csv: bool = True):
         provenance TEXT DEFAULT 'SIM_CALIBRATED'
     );
 
+    CREATE TABLE IF NOT EXISTS admin_users (
+        username TEXT PRIMARY KEY,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'controller',
+        full_name TEXT NOT NULL,
+        division TEXT NOT NULL DEFAULT 'CR-BB (Mumbai)',
+        created_at TEXT NOT NULL,
+        last_login TEXT
+    );
+
     -- Indexes for high throughput performance
     CREATE INDEX IF NOT EXISTS idx_train_state_time ON train_state(timestamp);
     CREATE INDEX IF NOT EXISTS idx_eta_train_st ON eta_predictions(train_id, station);
@@ -362,6 +372,20 @@ def seed_database(conn: sqlite3.Connection):
         INSERT OR REPLACE INTO model_registry (version, trained_on, mae, rmse, share_5min, coverage, params, status)
         VALUES ("B3-0.1.0", "2026-09-26T12:00:00", 1.84, 2.65, 0.912, 0.824, '{"max_iter": 100, "learning_rate": 0.08}', "CHAMPION")
     """)
+
+    # Seed Default Admin & Controller Users
+    # Hashes generated with SHA-256 for passwords:
+    # "admin123" -> 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
+    # "rail2026" -> 643e2f5b66d4a5840fd1f26f633630f57618a8dbb8e906b3252a16dcf456f4d3
+    admin_users = [
+        ("CR-DISPATCH-9401", "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", "controller", "Senior Section Controller", "CR-BB (Mumbai)", "2026-09-26T10:00:00", None),
+        ("CR-CHIEF-01", "643e2f5b66d4a5840fd1f26f633630f57618a8dbb8e906b3252a16dcf456f4d3", "admin", "Chief Train Controller (OCC)", "CR-BB (Mumbai)", "2026-09-26T10:00:00", None),
+        ("ADMIN", "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", "admin", "System Operations Administrator", "CR Central HQ", "2026-09-26T10:00:00", None)
+    ]
+    cursor.executemany(
+        "INSERT OR REPLACE INTO admin_users (username, password_hash, role, full_name, division, created_at, last_login) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        admin_users
+    )
 
     conn.commit()
 

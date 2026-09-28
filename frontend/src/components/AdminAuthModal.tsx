@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Shield, Lock, Key, AlertCircle, UserCheck, X } from "lucide-react";
+import { Shield, Lock, Key, AlertCircle, UserCheck, X, Loader2 } from "lucide-react";
+import { api } from "../api";
 
 interface AdminAuthModalProps {
   isOpen: boolean;
@@ -12,31 +13,51 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
   const [operatorId, setOperatorId] = useState<string>("CR-DISPATCH-9401");
   const [role, setRole] = useState<string>("Chief Train Controller (OCC)");
   const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
-  const validPins = ["admin123", "rail2026", "sih2026", "controller123", "1234"];
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validPins.includes(pin.trim().toLowerCase())) {
-      setError("");
-      sessionStorage.setItem("smart_rail_admin_auth", "true");
-      sessionStorage.setItem("smart_rail_admin_role", role);
-      sessionStorage.setItem("smart_rail_admin_operator", operatorId);
-      onSuccess(role);
-    } else {
-      setError("Invalid Authority Passcode. Please check your credentials.");
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api.login(operatorId, pin);
+      if (res.success) {
+        sessionStorage.setItem("smart_rail_admin_auth", "true");
+        sessionStorage.setItem("smart_rail_admin_role", res.role || role);
+        sessionStorage.setItem("smart_rail_admin_operator", res.operator_id || operatorId);
+        onSuccess(res.role || role);
+      } else {
+        setError(res.error || "Invalid Authority Passcode. Please check your credentials.");
+      }
+    } catch {
+      setError("Database connection error. Try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleQuickDemoLogin = () => {
+  const handleQuickDemoLogin = async () => {
     setPin("admin123");
+    setOperatorId("CR-DISPATCH-9401");
+    setLoading(true);
     setError("");
-    sessionStorage.setItem("smart_rail_admin_auth", "true");
-    sessionStorage.setItem("smart_rail_admin_role", "Chief Section Controller");
-    sessionStorage.setItem("smart_rail_admin_operator", "CR-CHIEF-01");
-    onSuccess("Chief Section Controller");
+    try {
+      const res = await api.login("CR-DISPATCH-9401", "admin123");
+      if (res.success) {
+        sessionStorage.setItem("smart_rail_admin_auth", "true");
+        sessionStorage.setItem("smart_rail_admin_role", "Senior Section Controller");
+        sessionStorage.setItem("smart_rail_admin_operator", "CR-DISPATCH-9401");
+        onSuccess("Senior Section Controller");
+      } else {
+        setError("Demo login failed.");
+      }
+    } catch {
+      setError("Database login error.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -124,10 +145,11 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
 
           <button
             type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2"
+            disabled={loading}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2"
           >
-            <Shield className="w-4 h-4" />
-            <span>Authenticate & Unlock Admin Deck</span>
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+            <span>{loading ? "Verifying with Database..." : "Authenticate & Unlock Admin Deck"}</span>
           </button>
         </form>
 
