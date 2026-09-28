@@ -4,10 +4,13 @@ import { AdminAuthModal } from "./components/AdminAuthModal";
 import { PassengerPage } from "./pages/PassengerPage";
 import { StationBoardPage } from "./pages/StationBoardPage";
 import { AnnouncementsPage } from "./pages/AnnouncementsPage";
-import { CorridorMapPage } from "./pages/CorridorMapPage";
+import { LiveMapPage } from "./pages/LiveMapPage";
+import { DelayAnalysisPage } from "./pages/DelayAnalysisPage";
+import { AboutPage } from "./pages/AboutPage";
 import { ControlRoomPage } from "./pages/ControlRoomPage";
 import { SimulatorPage } from "./pages/SimulatorPage";
 import { LearningPage } from "./pages/LearningPage";
+import { ApiDocsPage } from "./pages/ApiDocsPage";
 import { DataSourcesPage } from "./pages/DataSourcesPage";
 import { api, type TrainState } from "./api";
 import { AlertTriangle, ArrowRight, User, Shield, Lock } from "lucide-react";
@@ -20,6 +23,7 @@ const getLocalISOString = (d: Date = new Date()) => {
 export function App() {
   const [portal, setPortal] = useState<"user" | "admin">("user");
   const [activeTab, setActiveTab] = useState<string>("passenger");
+  const [selectedTrainId, setSelectedTrainId] = useState<string>("12123");
   const [simTime, setSimTime] = useState<string>(() => getLocalISOString());
   const [activeScenario, setActiveScenario] = useState<string>("CLEAN_RUN");
   const [trains, setTrains] = useState<TrainState[]>([]);
@@ -133,7 +137,7 @@ export function App() {
   }, [isPlaying]);
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <Navbar
         portal={portal}
         setPortal={setPortal}
@@ -165,7 +169,7 @@ export function App() {
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-slate-950 fill-current animate-bounce" />
               <span>
-                <strong>OPERATIONAL ADVISORY IN EFFECT:</strong> Traffic Controllers injected disruption:{" "}
+                <strong>OPERATIONAL ADVISORY IN EFFECT:</strong> Disruption injected:{" "}
                 <span className="font-mono underline">{activeScenario.replace(/_/g, " ")}</span>. Smart ETA forecasts and station displays are actively adjusting.
               </span>
             </div>
@@ -223,27 +227,27 @@ export function App() {
       {/* Unauthorized Admin Access Guard Screen */}
       {portal === "admin" && !isAuthorized && (
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-8 max-w-md w-full text-center space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-800 mx-auto flex items-center justify-center">
-              <Lock className="w-8 h-8 text-amber-700" />
+          <div className="bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl p-8 max-w-md w-full text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mx-auto flex items-center justify-center">
+              <Lock className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-extrabold text-slate-900">
+            <h2 className="text-xl font-extrabold text-slate-100">
               Admin & Control Room Protected
             </h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-slate-400 leading-relaxed">
               This area is restricted to authorized Railway Controllers, Chief Train Dispatchers, and Section Engineers. Passcode authentication is required to view and modify operational parameters.
             </p>
             <div className="pt-2 flex flex-col gap-2">
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2"
+                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer shadow-lg shadow-cyan-600/20 flex items-center justify-center gap-2"
               >
                 <Shield className="w-4 h-4" />
                 <span>Enter Authority Passcode</span>
               </button>
               <button
                 onClick={() => setPortal("user")}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-xs transition cursor-pointer"
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-xl text-xs transition cursor-pointer"
               >
                 Return to Passenger Portal
               </button>
@@ -253,14 +257,26 @@ export function App() {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-12">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
         {/* User Portal Pages */}
         {portal === "user" && (
           <>
             {activeTab === "passenger" && <PassengerPage simTime={simTime} />}
+            {activeTab === "map" && (
+              <LiveMapPage
+                selectedTrainId={selectedTrainId}
+                onSelectTrain={setSelectedTrainId}
+              />
+            )}
             {activeTab === "station" && <StationBoardPage simTime={simTime} />}
+            {activeTab === "delay-analysis" && (
+              <DelayAnalysisPage
+                selectedTrainId={selectedTrainId}
+                onSelectTrain={setSelectedTrainId}
+              />
+            )}
             {activeTab === "announcements" && <AnnouncementsPage simTime={simTime} />}
-            {activeTab === "map" && <CorridorMapPage simTime={simTime} trains={trains} />}
+            {activeTab === "about" && <AboutPage />}
           </>
         )}
 
@@ -276,6 +292,7 @@ export function App() {
               />
             )}
             {activeTab === "learning" && <LearningPage />}
+            {activeTab === "api-docs" && <ApiDocsPage />}
             {activeTab === "sources" && <DataSourcesPage />}
           </>
         )}

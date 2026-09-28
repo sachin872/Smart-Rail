@@ -1,4 +1,12 @@
 station_code,station_name,lat,lon,zone,division
+CSMT,Mumbai CSMT,18.9401,72.8353,CR,BB
+TNA,Thane,19.1860,72.9759,CR,BB
+KYN,Kalyan Jn,19.2364,73.1307,CR,BB
+KJT,Karjat Jn,18.9109,73.3243,CR,BB
+LNL,Lonavala,18.7500,73.4072,CR,PA
+KMST,Kamshet,18.7617,73.5606,CR,PA
+TGN,Talegaon,18.7300,73.6700,CR,PA
+PUNE,Pune Jn,18.5284,73.8744,CR,PA
 ST01,Station A (Mumbai CST),19.0760,72.8777,CR,BB
 ST02,Station B (Kalyan Jn),19.0178,73.0160,CR,BB
 ST03,Station C (Karjat Jn),18.9894,73.1175,CR,BB

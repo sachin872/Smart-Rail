@@ -325,6 +325,13 @@ def seed_database(conn: sqlite3.Connection):
         ("B02", "PASSENGER", "ALL", 17.0, 19.0, 23.0, 150, "v1.0"),
         ("B03", "EXPRESS", "ALL", 21.0, 23.0, 27.0, 120, "v1.0"),
         ("B03", "PASSENGER", "ALL", 27.0, 30.0, 35.0, 150, "v1.0"),
+        ("B_CSMT_TNA", "EXPRESS", "ALL", 28.0, 32.0, 38.0, 300, "v1.0"),
+        ("B_TNA_KYN", "EXPRESS", "ALL", 17.0, 19.0, 24.0, 300, "v1.0"),
+        ("B_KYN_KJT", "EXPRESS", "ALL", 36.0, 40.0, 46.0, 300, "v1.0"),
+        ("B_KJT_LNL", "EXPRESS", "ALL", 45.0, 52.0, 62.0, 300, "v1.0"),
+        ("B_LNL_KMST", "EXPRESS", "ALL", 14.0, 16.0, 20.0, 300, "v1.0"),
+        ("B_KMST_TGN", "EXPRESS", "ALL", 12.0, 14.0, 18.0, 300, "v1.0"),
+        ("B_TGN_PUNE", "EXPRESS", "ALL", 30.0, 34.0, 42.0, 300, "v1.0"),
     ]
     cursor.executemany(
         "INSERT OR REPLACE INTO srt_table (segment, train_class, time_band, p10, median, p90, n, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -333,6 +340,13 @@ def seed_database(conn: sqlite3.Connection):
 
     # Seed Historical Delay Profiles (train, station, day_type, season, mean, p50, p90, n)
     initial_profiles = [
+        ("12123", "TNA", "WEEKDAY", "MONSOON", 4.0, 3.0, 8.0, 180),
+        ("12123", "KYN", "WEEKDAY", "MONSOON", 6.5, 5.0, 11.0, 180),
+        ("12123", "KJT", "WEEKDAY", "MONSOON", 10.0, 8.5, 16.0, 180),
+        ("12123", "LNL", "WEEKDAY", "MONSOON", 16.5, 14.0, 22.0, 180),
+        ("12123", "KMST", "WEEKDAY", "MONSOON", 17.0, 15.0, 24.0, 180),
+        ("12123", "TGN", "WEEKDAY", "MONSOON", 17.5, 16.0, 25.0, 180),
+        ("12123", "PUNE", "WEEKDAY", "MONSOON", 18.2, 16.5, 26.0, 180),
         ("T101", "ST02", "WEEKDAY", "MONSOON", 2.5, 2.0, 5.0, 90),
         ("T101", "ST03", "WEEKDAY", "MONSOON", 3.8, 3.0, 7.5, 90),
         ("T101", "ST04", "WEEKDAY", "MONSOON", 4.2, 3.5, 8.0, 90),

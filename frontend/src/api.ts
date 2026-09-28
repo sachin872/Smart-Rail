@@ -74,13 +74,34 @@ export interface StationBoardResponse {
   arrivals_departures: StationBoardItem[];
 }
 
+export interface StationMeta {
+  code: string;
+  name: string;
+  lat: number;
+  lon: number;
+  division: string;
+  platforms: string[];
+  km: number;
+}
+
+export const CORRIDOR_STATIONS: StationMeta[] = [
+  { code: "CSMT", name: "Mumbai CSMT", lat: 18.9401, lon: 72.8353, division: "Mumbai (BB)", platforms: ["PF 1", "PF 8", "PF 14"], km: 0 },
+  { code: "TNA", name: "Thane", lat: 19.1860, lon: 72.9759, division: "Mumbai (BB)", platforms: ["PF 1", "PF 5"], km: 34 },
+  { code: "KYN", name: "Kalyan Jn", lat: 19.2364, lon: 73.1307, division: "Mumbai (BB)", platforms: ["PF 4", "PF 6"], km: 54 },
+  { code: "KJT", name: "Karjat Jn", lat: 18.9109, lon: 73.3243, division: "Mumbai (BB)", platforms: ["PF 1", "PF 3"], km: 100 },
+  { code: "LNL", name: "Lonavala", lat: 18.7500, lon: 73.4072, division: "Pune (PA)", platforms: ["PF 1", "PF 2"], km: 128 },
+  { code: "KMST", name: "Kamshet", lat: 18.7617, lon: 73.5606, division: "Pune (PA)", platforms: ["PF 1", "PF 2"], km: 144 },
+  { code: "TGN", name: "Talegaon", lat: 18.7300, lon: 73.6700, division: "Pune (PA)", platforms: ["PF 1", "PF 2"], km: 158 },
+  { code: "PUNE", name: "Pune Jn", lat: 18.5284, lon: 73.8744, division: "Pune (PA)", platforms: ["PF 1", "PF 2", "PF 3"], km: 192 },
+];
+
 // In-memory simulation state for standalone / offline / Vercel cloud execution
 class ClientSimulator {
   public clock: Date = new Date();
   public activeScenario: string = "CLEAN_RUN";
   public stepCount: number = 0;
-  public delays: Record<string, number> = { T101: 0, T102: 0, T103: 0, T104: 0 };
-  public qualities: Record<string, string> = { T101: "FRESH", T102: "FRESH", T103: "FRESH", T104: "FRESH" };
+  public delays: Record<string, number> = { "12123": 18.0, "12124": 2.0, "11007": 4.0, "12127": 0.0, T101: 0, T102: 0, T103: 0, T104: 0 };
+  public qualities: Record<string, string> = { "12123": "FRESH", "12124": "FRESH", "11007": "FRESH", "12127": "FRESH", T101: "FRESH", T102: "FRESH", T103: "FRESH", T104: "FRESH" };
 
   public getClock(): Date {
     if (this.stepCount === 0 && this.activeScenario === "CLEAN_RUN") {
@@ -93,8 +114,8 @@ class ClientSimulator {
     this.clock = new Date();
     this.activeScenario = "CLEAN_RUN";
     this.stepCount = 0;
-    this.delays = { T101: 0, T102: 0, T103: 0, T104: 0 };
-    this.qualities = { T101: "FRESH", T102: "FRESH", T103: "FRESH", T104: "FRESH" };
+    this.delays = { "12123": 18.0, "12124": 2.0, "11007": 4.0, "12127": 0.0, T101: 0, T102: 0, T103: 0, T104: 0 };
+    this.qualities = { "12123": "FRESH", "12124": "FRESH", "11007": "FRESH", "12127": "FRESH", T101: "FRESH", T102: "FRESH", T103: "FRESH", T104: "FRESH" };
   }
 
   public step(seconds: number = 60) {
@@ -104,19 +125,26 @@ class ClientSimulator {
 
   public injectScenario(sc: string) {
     this.activeScenario = sc;
-    if (sc === "RED_SIGNAL") {
+    if (sc === "STOPPAGE_10M" || sc === "UNSCHEDULED_STOP") {
+      this.delays["12123"] = (this.delays["12123"] || 18.0) + 10.0;
+      this.delays.T101 = (this.delays.T101 || 0) + 8.0;
+    } else if (sc === "CONGESTION_HIGH" || sc === "SPEED_RESTRICTION") {
+      this.delays["12123"] = (this.delays["12123"] || 18.0) + 7.0;
+      this.delays.T101 = (this.delays.T101 || 0) + 5.0;
+    } else if (sc === "RECOVERY_5M") {
+      this.delays["12123"] = Math.max(0, (this.delays["12123"] || 18.0) - 5.0);
+    } else if (sc === "NORMAL_RUNNING" || sc === "CLEAN_RUN") {
+      this.delays["12123"] = 18.0;
+      this.delays.T101 = 0;
+    } else if (sc === "RED_SIGNAL") {
+      this.delays["12123"] = (this.delays["12123"] || 18.0) + 6.0;
       this.delays.T101 = (this.delays.T101 || 0) + 6.0;
     } else if (sc === "HEAVY_RAIN") {
+      this.delays["12123"] = (this.delays["12123"] || 18.0) + 4.5;
       this.delays.T101 = (this.delays.T101 || 0) + 3.5;
       this.delays.T102 = (this.delays.T102 || 0) + 3.5;
-      this.delays.T104 = (this.delays.T104 || 0) + 3.5;
-    } else if (sc === "SPEED_RESTRICTION") {
-      this.delays.T101 = (this.delays.T101 || 0) + 5.0;
-    } else if (sc === "LC_CLOSURE") {
-      this.delays.T101 = (this.delays.T101 || 0) + 4.0;
-    } else if (sc === "UNSCHEDULED_STOP") {
-      this.delays.T101 = (this.delays.T101 || 0) + 8.0;
     } else if (sc === "GPS_DEGRADED") {
+      this.qualities["12123"] = "STALE";
       this.qualities.T101 = "STALE";
     }
   }

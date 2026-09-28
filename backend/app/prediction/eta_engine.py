@@ -95,6 +95,20 @@ class ETAEngine:
 
         # Map segments between sequential stops
         segment_map = {
+            ("CSMT", "TNA"): "B_CSMT_TNA",
+            ("TNA", "KYN"): "B_TNA_KYN",
+            ("KYN", "KJT"): "B_KYN_KJT",
+            ("KJT", "LNL"): "B_KJT_LNL",
+            ("LNL", "KMST"): "B_LNL_KMST",
+            ("KMST", "TGN"): "B_KMST_TGN",
+            ("TGN", "PUNE"): "B_TGN_PUNE",
+            ("PUNE", "TGN"): "B_TGN_PUNE",
+            ("TGN", "KMST"): "B_KMST_TGN",
+            ("KMST", "LNL"): "B_LNL_KMST",
+            ("LNL", "KJT"): "B_KJT_LNL",
+            ("KJT", "KYN"): "B_KYN_KJT",
+            ("KYN", "TNA"): "B_TNA_KYN",
+            ("TNA", "CSMT"): "B_CSMT_TNA",
             ("ST01", "ST02"): "B01",
             ("ST02", "ST03"): "B02",
             ("ST03", "ST04"): "B03",

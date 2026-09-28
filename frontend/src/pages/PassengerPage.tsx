@@ -1,46 +1,53 @@
 import React, { useState, useEffect } from "react";
 import {
   Train,
-  Clock,
   AlertCircle,
   CheckCircle2,
   ShieldAlert,
   Sparkles,
-  Navigation,
   MessageSquare,
   Copy,
   Check,
   ChevronDown,
   ChevronUp,
-  Info
+  MapPin
 } from "lucide-react";
-import { api, type ETAResponse } from "../api";
+import { api, type ETAResponse, type TrainState } from "../api";
+import { EventTimeline } from "../components/EventTimeline";
 
 interface PassengerPageProps {
   simTime: string;
 }
 
 export const PassengerPage: React.FC<PassengerPageProps> = ({ simTime }) => {
-  const [selectedTrain, setSelectedTrain] = useState<string>("T101");
+  const [selectedTrain, setSelectedTrain] = useState<string>("12123");
   const [etaData, setEtaData] = useState<ETAResponse | null>(null);
+  const [trainStates, setTrainStates] = useState<TrainState[]>([]);
   const [notifData, setNotifData] = useState<any>(null);
   const [selectedLang, setSelectedLang] = useState<"en" | "hi" | "mr">("en");
   const [copied, setCopied] = useState<boolean>(false);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState<boolean>(false);
+  const [activeScenario, setActiveScenario] = useState<string>("CLEAN_RUN");
+  const [deltaMessage, setDeltaMessage] = useState<string | null>(null);
 
   const trainOptions = [
-    { id: "T101", name: "12124 Deccan Superfast Express", route: "Mumbai CST ➔ Lonavala", class: "EXPRESS", prio: 1 },
-    { id: "T102", name: "95102 Local Commuter Fast", route: "Mumbai CST ➔ Karjat", class: "PASSENGER", prio: 2 },
-    { id: "T103", name: "95203 Karjat Siding Shuttle", route: "Kalyan ➔ Karjat", class: "PASSENGER", prio: 2 },
-    { id: "T104", name: "12125 Pragati Express (Down Line)", route: "Lonavala ➔ Mumbai CST", class: "EXPRESS", prio: 1 },
+    { id: "12123", name: "12123 Mumbai Pune Express", route: "Mumbai CSMT ➔ Pune Jn", class: "EXPRESS", prio: 1, defaultDelay: "+18m at Lonavala" },
+    { id: "12124", name: "12124 Deccan Queen (Down)", route: "Pune Jn ➔ Mumbai CSMT", class: "EXPRESS", prio: 1, defaultDelay: "+2m" },
+    { id: "11007", name: "11007 Deccan Express", route: "Mumbai CSMT ➔ Pune Jn", class: "EXPRESS", prio: 1, defaultDelay: "+4m at Kalyan" },
+    { id: "12127", name: "12127 Mumbai Pune Intercity", route: "Mumbai CSMT ➔ Pune Jn", class: "EXPRESS", prio: 1, defaultDelay: "On Time" },
+    { id: "T101", name: "T101 Deccan Superfast", route: "Station A ➔ Station D", class: "EXPRESS", prio: 1, defaultDelay: "On Time" }
   ];
 
   const fetchETA = async (tId: string) => {
     try {
-      const data = await api.getETA(tId);
+      const [data, notifs, trainsRes] = await Promise.all([
+        api.getETA(tId),
+        api.getNotifications(tId),
+        api.getTrains()
+      ]);
       setEtaData(data);
-      const notifs = await api.getNotifications(tId);
       setNotifData(notifs);
+      setTrainStates(trainsRes.data);
     } catch (e) {
       console.error(e);
     }
@@ -49,6 +56,46 @@ export const PassengerPage: React.FC<PassengerPageProps> = ({ simTime }) => {
   useEffect(() => {
     fetchETA(selectedTrain);
   }, [selectedTrain, simTime]);
+
+  const currentTrainState = trainStates.find(t => t.train_id === selectedTrain) || {
+    train_id: selectedTrain,
+    train_name: "Mumbai Pune Express",
+    class: "EXPRESS",
+    priority: 1,
+    lat: 18.7500,
+    lon: 73.4072,
+    speed: 65.0,
+    block_id: "B_LNL_KMST",
+    delay: 18.0,
+    quality: "FRESH",
+    current_stop_idx: 5,
+    target_station: "KMST",
+    progress_ratio: 0.15,
+    status: "RUNNING",
+    timestamp: new Date().toISOString()
+  };
+
+  const handleInjectScenario = async (sc: string) => {
+    setActiveScenario(sc);
+    try {
+      await api.injectScenario(sc);
+      if (sc === 'STOPPAGE_10M' || sc === 'UNSCHEDULED_STOP') {
+        setDeltaMessage("⚠️ ETA updated: +10 minutes added due to unexpected technical stoppage at Lonavala.");
+      } else if (sc === 'CONGESTION_HIGH' || sc === 'SPEED_RESTRICTION') {
+        setDeltaMessage("⚠️ ETA updated: +7 minutes added due to track speed restriction (35 km/h) ahead.");
+      } else if (sc === 'HEAVY_RAIN') {
+        setDeltaMessage("🌧️ ETA updated: Monsoon wetting factor applied; uncertainty intervals widened.");
+      } else if (sc === 'RECOVERY_5M') {
+        setDeltaMessage("⚡ ETA updated: Priority clearance active; train predicted to recover 5 minutes.");
+      } else {
+        setDeltaMessage("🟢 Baseline operational parameters restored.");
+      }
+      setTimeout(() => setDeltaMessage(null), 7000);
+      await fetchETA(selectedTrain);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const upcomingStops = etaData?.stops?.filter((s) => s.status === "UPCOMING") || [];
   const nextStop = upcomingStops[0] || etaData?.stops?.[etaData.stops.length - 1];
@@ -66,328 +113,332 @@ export const PassengerPage: React.FC<PassengerPageProps> = ({ simTime }) => {
     switch (quality) {
       case "FRESH":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            Live GPS: Fresh Signal
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            Live Telemetry: Fresh (Sub-second)
           </span>
         );
       case "STALE":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300">
-            <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950/80 text-amber-400 border border-amber-800/80">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
             GPS Delayed (Window Widened)
           </span>
         );
       case "LOST":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-900 border border-rose-300">
-            <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-950/80 text-rose-400 border border-rose-800/80">
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
             Signal Lost (Schedule Fallback)
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300">
             {quality}
           </span>
         );
     }
   };
 
-  const formatReasonText = (r: string) => {
-    if (r.includes("RED_SIGNAL")) return "Signal Halt: Waiting for section clearance ahead";
-    if (r.includes("SPEED_RESTRICTION")) return "Speed Restriction: Track caution slowdown";
-    if (r.includes("MONSOON") || r.includes("RAIN")) return "Weather: Monsoon track wetting slowdown";
-    if (r.includes("LEVEL_CROSSING")) return "Level Crossing: Gate closure hold";
-    if (r.includes("UNSCHEDULED_STOP")) return "Technical Stop: Unscheduled operational halt";
-    if (r.includes("HEADWAY")) return "Preceding Train: Maintaining safe spacing";
-    return r;
-  };
-
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-      {/* Search & Service Selector */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6">
+      {/* Top Banner & Train Selector */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Passenger Live Enquiry</span>
-            <h1 className="text-xl font-extrabold text-slate-900 mt-0.5 flex items-center gap-2">
-              <Train className="w-5 h-5 text-blue-600" />
-              Real-Time Train Arrival Status
-            </h1>
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <h2 className="text-xl font-black text-slate-100 flex items-center gap-2">
+                <Train className="w-5 h-5 text-cyan-400" />
+                Live Train Tracking & Dynamic ETA Forecasting
+              </h2>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Multi-horizon arrival predictions with 80% conformal uncertainty intervals on the Mumbai–Pune corridor.
+            </p>
           </div>
 
-          <div className="w-full md:w-80">
-            <label className="text-xs font-bold text-slate-600 block mb-1">Select Train / Service:</label>
-            <select
-              value={selectedTrain}
-              onChange={(e) => setSelectedTrain(e.target.value)}
-              className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-3.5 py-2.5 transition focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer"
+          <div className="flex items-center gap-2">
+            {getQualityBadge(etaData?.quality || "FRESH")}
+          </div>
+        </div>
+
+        {/* Train Selector Pills */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 mt-5">
+          {trainOptions.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setSelectedTrain(t.id)}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                selectedTrain === t.id
+                  ? "bg-cyan-500/10 border-cyan-500 ring-2 ring-cyan-500/20 shadow"
+                  : "bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200"
+              }`}
             >
-              {trainOptions.map((t) => (
-                <option key={t.id} value={t.id}>
-                  [{t.id}] {t.name} ({t.route})
-                </option>
-              ))}
-            </select>
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-bold text-xs text-slate-100">{t.id}</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800">
+                  {t.class}
+                </span>
+              </div>
+              <div className="text-xs font-semibold text-slate-200 truncate mt-1">{t.name}</div>
+              <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500">
+                <span>{t.route}</span>
+                <span className="text-amber-400 font-bold">{t.defaultDelay}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Focus Hero: Selected Train Live Status */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Next Upcoming Station Card */}
+        <div className="bg-gradient-to-br from-slate-900 to-cyan-950/40 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-xs text-slate-400 uppercase font-bold tracking-wider">
+              <span>Next Approaching Stop</span>
+              <span className="font-mono text-cyan-400">Stop #{nextStop?.seq || 6}</span>
+            </div>
+            <div className="text-2xl font-black text-slate-100 mt-2 flex items-center gap-2">
+              <MapPin className="w-6 h-6 text-cyan-400" />
+              {nextStop?.station || "KMST (Kamshet)"}
+            </div>
+            <div className="text-xs text-slate-400 mt-1">
+              Scheduled Arrival: <span className="font-mono text-slate-200">{nextStop?.scheduled_arr || "--:--"}</span>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-slate-800/80">
+            <span className="text-[11px] text-slate-400 block font-semibold">Predicted Arrival (Smart Rail AI):</span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-3xl font-black font-mono text-cyan-400">
+                {nextStop?.b3_eta || "--:--"}
+              </span>
+              <span className="text-xs font-mono text-slate-400">
+                [{nextStop?.low || "--:--"} – {nextStop?.high || "--:--"}]
+              </span>
+            </div>
+            <span className="text-[11px] font-mono text-amber-400 block mt-1">
+              {nextStop?.delay_min && nextStop.delay_min > 0 ? `Late by ~${Math.round(nextStop.delay_min)} min` : "On Time"}
+            </span>
+          </div>
+        </div>
+
+        {/* Final Destination Arrival Card */}
+        <div className="bg-gradient-to-br from-slate-900 to-emerald-950/40 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-xs text-slate-400 uppercase font-bold tracking-wider">
+              <span>Final Destination</span>
+              <span className="font-mono text-emerald-400">Terminus</span>
+            </div>
+            <div className="text-2xl font-black text-slate-100 mt-2 flex items-center gap-2">
+              <MapPin className="w-6 h-6 text-emerald-400" />
+              {finalStop?.station || "PUNE (Pune Jn)"}
+            </div>
+            <div className="text-xs text-slate-400 mt-1">
+              Scheduled Arrival: <span className="font-mono text-slate-200">{finalStop?.scheduled_arr || "--:--"}</span>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-slate-800/80">
+            <span className="text-[11px] text-slate-400 block font-semibold">Destination ETA Forecast:</span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-3xl font-black font-mono text-emerald-400">
+                {finalStop?.b3_eta || "--:--"}
+              </span>
+              <span className="text-xs font-mono text-slate-400">
+                [{finalStop?.low || "--:--"} – {finalStop?.high || "--:--"}]
+              </span>
+            </div>
+            <span className="text-[11px] font-mono text-cyan-300 block mt-1">
+              Conformal 80% Uncertainty Window
+            </span>
+          </div>
+        </div>
+
+        {/* Real-Time Telemetry Summary Card */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-2">
+              Live Operational Telemetry
+            </div>
+            <div className="space-y-2.5 text-xs">
+              <div className="flex justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                <span className="text-slate-400">Current Speed:</span>
+                <span className="font-mono font-bold text-cyan-300">{Math.round(currentTrainState.speed)} km/h</span>
+              </div>
+              <div className="flex justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                <span className="text-slate-400">Current Block:</span>
+                <span className="font-mono font-bold text-slate-200">{currentTrainState.block_id}</span>
+              </div>
+              <div className="flex justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                <span className="text-slate-400">Live Delay:</span>
+                <span className="font-mono font-bold text-amber-400">+{Math.round(currentTrainState.delay)} min</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-[11px]">
+            <span className="text-slate-500">AI Model Version:</span>
+            <span className="font-mono text-cyan-400 font-bold">{etaData?.model_version || "B3-0.1.0"}</span>
           </div>
         </div>
       </div>
 
-      {/* Hero Smart ETA Card */}
-      {nextStop && (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 text-white rounded-3xl shadow-xl p-6 md:p-8 border border-slate-800 relative overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-            {/* Left: Train Details & Next Stop */}
-            <div className="md:col-span-2 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-blue-600 text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  {etaData?.class}
-                </span>
-                <span className="text-xs font-mono text-slate-400">ID: {etaData?.train_id}</span>
-                {getQualityBadge(etaData?.quality || "FRESH")}
-              </div>
+      {/* Dynamic Event Timeline & Disruption Injection */}
+      <EventTimeline
+        train={currentTrainState}
+        etaData={etaData}
+        activeScenario={activeScenario}
+        onInjectScenario={handleInjectScenario}
+        lastDeltaMsg={deltaMessage}
+      />
 
-              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {etaData?.train_name}
-              </h2>
-
-              <div className="flex items-center gap-2 text-sm text-slate-300">
-                <Navigation className="w-4 h-4 text-blue-400 shrink-0" />
-                <span>
-                  Next Station: <strong className="text-white font-bold">{nextStop.station}</strong>
-                  {finalStop && finalStop.station !== nextStop.station && (
-                    <span className="text-slate-400 text-xs ml-1.5">&rarr; Terminating at {finalStop.station}</span>
-                  )}
-                </span>
-              </div>
-
-              {/* Station Progress Stepper */}
-              <div className="pt-3">
-                <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
-                  {etaData?.stops?.map((stop) => {
-                    const isPassed = stop.status === "PASSED";
-                    const isCurrent = stop === nextStop;
-                    return (
-                      <div key={stop.seq} className="flex flex-col items-center relative">
-                        <div
-                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
-                            isCurrent
-                              ? "bg-blue-500 text-white ring-4 ring-blue-500/30 scale-110"
-                              : isPassed
-                              ? "bg-emerald-600 text-white"
-                              : "bg-slate-800 text-slate-400 border border-slate-700"
-                          }`}
-                        >
-                          {isPassed ? <Check className="w-3 h-3" /> : stop.seq}
-                        </div>
-                        <span className={`text-[11px] mt-1 font-sans ${isCurrent ? "text-blue-400 font-bold" : "text-slate-400"}`}>
-                          {stop.station}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Smart ETA Display Box */}
-            <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-5 text-center md:text-right flex flex-col justify-center space-y-2 shadow-inner">
-              <div className="text-xs font-bold text-blue-300 uppercase tracking-wider flex items-center justify-center md:justify-end gap-1.5">
-                <Sparkles className="w-4 h-4 text-blue-400" />
-                Expected Time of Arrival
-              </div>
-
-              <div className="text-4xl sm:text-5xl font-mono font-black text-white tracking-tight">
-                {nextStop.b3_eta}
-              </div>
-
-              <div className="text-xs text-slate-300 font-mono">
-                Confidence Window: <span className="text-emerald-400 font-bold">{nextStop.low} – {nextStop.high}</span>
-              </div>
-
-              <div className="pt-1">
-                {nextStop.delay_min > 2 ? (
-                  <span className="inline-block bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-full text-xs font-bold">
-                    ⚠️ Running +{nextStop.delay_min} min late
-                  </span>
-                ) : (
-                  <span className="inline-block bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-full text-xs font-bold">
-                    🟢 Running On Time
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Operational Causes (Explainability) */}
-          <div className="mt-6 pt-5 border-t border-slate-800/80">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5 text-blue-400" />
-              Why this arrival time? (Operational Breakdown)
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {nextStop.reasons && nextStop.reasons.length > 0 ? (
-                nextStop.reasons.map((r, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium bg-slate-800 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700 shadow-sm"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                    {formatReasonText(r)}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-slate-400">All track sections clear. Moving under normal operating speed.</span>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Multi-Station Timetable Vector */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5">
-        <div className="flex items-center justify-between mb-4">
+      {/* Multi-Station Predictive ETA Vector Table */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-800">
           <div>
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-blue-600" />
-              Full Journey Station-by-Station Forecast
+            <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-cyan-400" />
+              Multi-Station ETA Vector & Benchmark Comparison
             </h3>
-            <p className="text-xs text-slate-500">Live dynamic ETA updated for every upcoming stop</p>
+            <p className="text-xs text-slate-400">
+              Comparing Scheduled (B0), Incumbent Linear (B1), Rule-Based SRT (B2), and Smart Rail AI (B3).
+            </p>
           </div>
 
           <button
             onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+            className="flex items-center gap-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl transition-all border border-slate-700"
           >
-            {showTechnicalDetails ? "Hide Baseline Models" : "Compare Baseline Models (B0-B3)"}
             {showTechnicalDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            {showTechnicalDetails ? "Hide Baselines (B0/B1/B2)" : "Show Baselines (B0/B1/B2)"}
           </button>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs sm:text-sm">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr className="bg-slate-50 text-slate-500 uppercase text-[11px] font-bold border-b border-slate-200">
-                <th className="py-3 px-3">#</th>
+              <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                <th className="py-3 px-3">Seq</th>
                 <th className="py-3 px-3">Station</th>
                 <th className="py-3 px-3">Scheduled</th>
                 {showTechnicalDetails && (
                   <>
-                    <th className="py-3 px-3 text-slate-400">B0 (Timetable)</th>
-                    <th className="py-3 px-3 text-slate-500">B1 (Incumbent)</th>
-                    <th className="py-3 px-3 text-slate-700">B2 (Rules)</th>
+                    <th className="py-3 px-3 text-slate-400">B0 (Sched)</th>
+                    <th className="py-3 px-3 text-slate-400">B1 (Linear)</th>
+                    <th className="py-3 px-3 text-slate-400">B2 (Rules)</th>
                   </>
                 )}
-                <th className="py-3 px-3 font-bold text-blue-600">Smart ETA</th>
-                <th className="py-3 px-3">80% Window</th>
+                <th className="py-3 px-3 text-cyan-400">B3 Smart Rail ETA</th>
+                <th className="py-3 px-3">80% Conformal Window</th>
                 <th className="py-3 px-3">Delay</th>
-                <th className="py-3 px-3">Status</th>
+                <th className="py-3 px-3">Operational Reason</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {etaData?.stops?.map((stop) => (
-                <tr
-                  key={stop.seq}
-                  className={`transition ${
-                    stop === nextStop ? "bg-blue-50/60 font-semibold" : "hover:bg-slate-50"
-                  }`}
-                >
-                  <td className="py-3 px-3 font-mono text-slate-400">{stop.seq}</td>
-                  <td className="py-3 px-3 font-bold text-slate-900">{stop.station}</td>
-                  <td className="py-3 px-3 font-mono text-slate-600">{stop.scheduled_arr || stop.scheduled_dep}</td>
-                  {showTechnicalDetails && (
-                    <>
-                      <td className="py-3 px-3 font-mono text-slate-400">{stop.b0_eta}</td>
-                      <td className="py-3 px-3 font-mono text-slate-500">{stop.b1_eta}</td>
-                      <td className="py-3 px-3 font-mono text-slate-700">{stop.b2_eta}</td>
-                    </>
-                  )}
-                  <td className="py-3 px-3 font-mono font-black text-blue-600 text-sm">{stop.b3_eta}</td>
-                  <td className="py-3 px-3 font-mono text-xs text-emerald-800">
-                    <span className="bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                      {stop.low} – {stop.high}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 font-mono">
-                    {stop.delay_min > 0 ? (
-                      <span className="text-amber-600 font-bold">+{stop.delay_min} min</span>
-                    ) : (
-                      <span className="text-emerald-600 font-medium">On Time</span>
+            <tbody className="divide-y divide-slate-800/60 font-mono">
+              {etaData?.stops?.map((st) => {
+                const isPassed = st.status === "PASSED";
+                const isCurrent = st.seq === currentTrainState.current_stop_idx;
+
+                return (
+                  <tr
+                    key={st.station}
+                    className={`transition-colors ${
+                      isCurrent
+                        ? "bg-amber-950/20 text-amber-200 font-bold"
+                        : isPassed
+                        ? "text-slate-500 opacity-70"
+                        : "hover:bg-slate-800/40 text-slate-200"
+                    }`}
+                  >
+                    <td className="py-3 px-3 font-semibold">{st.seq}</td>
+                    <td className="py-3 px-3 font-bold font-sans flex items-center gap-1.5">
+                      <span>{st.station}</span>
+                      {isCurrent && (
+                        <span className="text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/40 px-1.5 py-0.2 rounded">
+                          CURRENT
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 text-slate-400">{st.scheduled_arr || st.scheduled_dep}</td>
+                    {showTechnicalDetails && (
+                      <>
+                        <td className="py-3 px-3 text-slate-500">{st.b0_eta}</td>
+                        <td className="py-3 px-3 text-slate-400">{st.b1_eta}</td>
+                        <td className="py-3 px-3 text-slate-300">{st.b2_eta}</td>
+                      </>
                     )}
-                  </td>
-                  <td className="py-3 px-3">
-                    <span
-                      className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold ${
-                        stop.status === "PASSED"
-                          ? "bg-slate-100 text-slate-500"
-                          : stop === nextStop
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "bg-emerald-100 text-emerald-800"
-                      }`}
-                    >
-                      {stop.status === "PASSED" ? "Departed" : stop === nextStop ? "Next Stop" : "Upcoming"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                    <td className="py-3 px-3 font-black text-cyan-400 text-sm">
+                      {st.b3_eta}
+                    </td>
+                    <td className="py-3 px-3 text-slate-400 font-sans text-xs">
+                      [{st.low} – {st.high}]
+                    </td>
+                    <td className="py-3 px-3">
+                      {st.delay_min > 0 ? (
+                        <span className="text-amber-400 font-bold">+{Math.round(st.delay_min)}m</span>
+                      ) : (
+                        <span className="text-emerald-400 font-bold">ON TIME</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 font-sans text-[11px] text-slate-400 max-w-xs truncate">
+                      {st.reasons?.join(", ") || "Normal Line Transit"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Multilingual Passenger SMS & WhatsApp Preview */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-blue-600" />
-              Automated Passenger SMS / App Broadcast Template
+      {/* Copyable Trilingual Passenger Alerts */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-cyan-400" />
+            <h3 className="text-sm font-bold text-slate-100">
+              Trilingual Automated Passenger Advisory Message (SMS / WhatsApp / NTES)
             </h3>
-            <p className="text-xs text-slate-500">Live multi-lingual broadcast format dispatched upon delay &ge; 5m</p>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex rounded-xl bg-slate-100 p-1 text-xs font-bold text-slate-700">
+            {(["en", "hi", "mr"] as const).map((lang) => (
               <button
-                onClick={() => setSelectedLang("en")}
-                className={`px-3 py-1 rounded-lg transition cursor-pointer ${
-                  selectedLang === "en" ? "bg-white text-blue-600 shadow-sm" : "hover:text-slate-900"
+                key={lang}
+                onClick={() => setSelectedLang(lang)}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  selectedLang === lang
+                    ? "bg-cyan-600 text-white shadow"
+                    : "bg-slate-800 text-slate-400 hover:text-slate-200"
                 }`}
               >
-                English
+                {lang === "en" ? "English" : lang === "hi" ? "हिन्दी" : "मराठी"}
               </button>
-              <button
-                onClick={() => setSelectedLang("hi")}
-                className={`px-3 py-1 rounded-lg transition cursor-pointer ${
-                  selectedLang === "hi" ? "bg-white text-blue-600 shadow-sm" : "hover:text-slate-900"
-                }`}
-              >
-                हिन्दी
-              </button>
-              <button
-                onClick={() => setSelectedLang("mr")}
-                className={`px-3 py-1 rounded-lg transition cursor-pointer ${
-                  selectedLang === "mr" ? "bg-white text-blue-600 shadow-sm" : "hover:text-slate-900"
-                }`}
-              >
-                मराठी
-              </button>
-            </div>
-
-            <button
-              onClick={handleCopyNotification}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
-              title="Copy message text"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? "Copied" : "Copy"}</span>
-            </button>
+            ))}
           </div>
         </div>
 
-        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-xs sm:text-sm font-medium text-slate-800 leading-relaxed font-sans shadow-inner">
-          {notifData ? notifData[selectedLang] : "Loading live message template..."}
+        <div className="relative bg-slate-950 border border-slate-800 rounded-xl p-4">
+          <p className="text-xs text-slate-200 leading-relaxed font-mono">
+            {notifData?.[selectedLang] ||
+              (selectedLang === "en"
+                ? `Train ${selectedTrain} (Mumbai Pune Express) is running late by approx ${Math.round(currentTrainState.delay)} min. Predicted arrival at Pune Jn: ${finalStop?.b3_eta} [${finalStop?.low} - ${finalStop?.high}].`
+                : selectedLang === "hi"
+                ? `गाड़ी संख्या ${selectedTrain} (मुंबई पुणे एक्सप्रेस) लगभग ${Math.round(currentTrainState.delay)} मिनट की देरी से चल रही है। पुणे जं. पर अनुमानित आगमन: ${finalStop?.b3_eta}।`
+                : `गाडी क्र. ${selectedTrain} (मुंबई पुणे एक्सप्रेस) सुमारे ${Math.round(currentTrainState.delay)} मिनिटे विलंबाने धावत आहे. पुणे जं. येथे अंदाजित आगमन: ${finalStop?.b3_eta}.`)}
+          </p>
+
+          <button
+            onClick={handleCopyNotification}
+            className="absolute top-3 right-3 flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1 rounded-lg border border-slate-700 transition-all active:scale-95"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? "Copied" : "Copy Alert"}
+          </button>
         </div>
       </div>
     </div>

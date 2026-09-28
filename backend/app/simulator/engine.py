@@ -40,10 +40,28 @@ class TrainSimulator:
         # T102 (At ST01 preparing dep in 5 min)
         # T103 (At ST02 scheduled dep in 25 min)
         # T104 (Departed ST04 on Down line 20 min ago heading to ST03)
-        st01 = rail_graph.get_station("ST01") or {"lat": 19.0760, "lon": 72.8777}
-        st02 = rail_graph.get_station("ST02") or {"lat": 19.0178, "lon": 73.0160}
-        st03 = rail_graph.get_station("ST03") or {"lat": 18.9894, "lon": 73.1175}
-        st04 = rail_graph.get_station("ST04") or {"lat": 18.7500, "lon": 73.4200}
+        # Railway Stations for interpolation
+        csmt = rail_graph.get_station("CSMT") or {"lat": 18.9401, "lon": 72.8353}
+        tna = rail_graph.get_station("TNA") or {"lat": 19.1860, "lon": 72.9759}
+        kyn = rail_graph.get_station("KYN") or {"lat": 19.2364, "lon": 73.1307}
+        kjt = rail_graph.get_station("KJT") or {"lat": 18.9109, "lon": 73.3243}
+        lnl = rail_graph.get_station("LNL") or {"lat": 18.7500, "lon": 73.4072}
+        kmst = rail_graph.get_station("KMST") or {"lat": 18.7617, "lon": 73.5606}
+        tgn = rail_graph.get_station("TGN") or {"lat": 18.7300, "lon": 73.6700}
+        pune = rail_graph.get_station("PUNE") or {"lat": 18.5284, "lon": 73.8744}
+
+        st01 = rail_graph.get_station("ST01") or {"lat": 18.9401, "lon": 72.8353}
+        st02 = rail_graph.get_station("ST02") or {"lat": 19.2364, "lon": 73.1307}
+        st03 = rail_graph.get_station("ST03") or {"lat": 18.9109, "lon": 73.3243}
+        st04 = rail_graph.get_station("ST04") or {"lat": 18.7500, "lon": 73.4072}
+
+        # Position 12123 just past Lonavala (LNL) heading towards Kamshet (KMST)
+        t12123_lat = lnl["lat"] + 0.15 * (kmst["lat"] - lnl["lat"])
+        t12123_lon = lnl["lon"] + 0.15 * (kmst["lon"] - lnl["lon"])
+
+        # Position 12124 (Down) between Pune & Talegaon
+        t12124_lat = pune["lat"] + 0.40 * (tgn["lat"] - pune["lat"])
+        t12124_lon = pune["lon"] + 0.40 * (tgn["lon"] - pune["lon"])
 
         # Interpolate initial position for T101 midway B01
         t101_lat = st01["lat"] + 0.45 * (st02["lat"] - st01["lat"])
@@ -54,6 +72,78 @@ class TrainSimulator:
         t104_lon = st04["lon"] + 0.30 * (st03["lon"] - st04["lon"])
 
         self.train_states = {
+            "12123": {
+                "train_id": "12123",
+                "train_name": "Mumbai Pune Express",
+                "class": "EXPRESS",
+                "priority": 1,
+                "lat": t12123_lat,
+                "lon": t12123_lon,
+                "speed": 65.0,
+                "block_id": "B_LNL_KMST",
+                "delay": 18.0, # Default showcase delay: +18 min at Lonavala
+                "quality": "FRESH",
+                "current_stop_idx": 5, # Currently departed LNL (stop 5), heading to KMST (stop 6)
+                "target_station": "KMST",
+                "destination": "PUNE",
+                "progress_ratio": 0.15,
+                "status": "RUNNING",
+                "timestamp": self.clock.isoformat()
+            },
+            "12124": {
+                "train_id": "12124",
+                "train_name": "Deccan Queen (Down)",
+                "class": "EXPRESS",
+                "priority": 1,
+                "lat": t12124_lat,
+                "lon": t12124_lon,
+                "speed": 74.0,
+                "block_id": "B_TGN_PUNE_REV",
+                "delay": 2.0,
+                "quality": "FRESH",
+                "current_stop_idx": 2,
+                "target_station": "TGN",
+                "destination": "CSMT",
+                "progress_ratio": 0.40,
+                "status": "RUNNING",
+                "timestamp": self.clock.isoformat()
+            },
+            "11007": {
+                "train_id": "11007",
+                "train_name": "Deccan Express",
+                "class": "EXPRESS",
+                "priority": 1,
+                "lat": kyn["lat"],
+                "lon": kyn["lon"],
+                "speed": 0.0,
+                "block_id": "KYN_PF4",
+                "delay": 4.0,
+                "quality": "FRESH",
+                "current_stop_idx": 3,
+                "target_station": "KYN",
+                "destination": "PUNE",
+                "progress_ratio": 0.0,
+                "status": "BOARDING",
+                "timestamp": self.clock.isoformat()
+            },
+            "12127": {
+                "train_id": "12127",
+                "train_name": "Mumbai Pune Intercity",
+                "class": "EXPRESS",
+                "priority": 1,
+                "lat": csmt["lat"],
+                "lon": csmt["lon"],
+                "speed": 0.0,
+                "block_id": "CSMT_PF1",
+                "delay": 0.0,
+                "quality": "FRESH",
+                "current_stop_idx": 1,
+                "target_station": "CSMT",
+                "destination": "PUNE",
+                "progress_ratio": 0.0,
+                "status": "SCHEDULED",
+                "timestamp": self.clock.isoformat()
+            },
             "T101": {
                 "train_id": "T101",
                 "train_name": "Deccan Superfast",
@@ -67,6 +157,7 @@ class TrainSimulator:
                 "quality": "FRESH",
                 "current_stop_idx": 2,
                 "target_station": "ST02",
+                "destination": "ST04",
                 "progress_ratio": 0.45,
                 "status": "RUNNING",
                 "timestamp": self.clock.isoformat()
@@ -84,6 +175,7 @@ class TrainSimulator:
                 "quality": "FRESH",
                 "current_stop_idx": 1,
                 "target_station": "ST01",
+                "destination": "ST03",
                 "progress_ratio": 0.0,
                 "status": "BOARDING",
                 "timestamp": self.clock.isoformat()
@@ -101,6 +193,7 @@ class TrainSimulator:
                 "quality": "FRESH",
                 "current_stop_idx": 1,
                 "target_station": "ST02",
+                "destination": "ST03",
                 "progress_ratio": 0.0,
                 "status": "SCHEDULED",
                 "timestamp": self.clock.isoformat()
@@ -118,6 +211,7 @@ class TrainSimulator:
                 "quality": "FRESH",
                 "current_stop_idx": 2,
                 "target_station": "ST03",
+                "destination": "ST01",
                 "progress_ratio": 0.30,
                 "status": "RUNNING",
                 "timestamp": self.clock.isoformat()
@@ -130,6 +224,26 @@ class TrainSimulator:
         
         # Seed timetable relative to current live simulation clock
         timetable_data = [
+            # 12123 (Mumbai Pune Express) - Passed CSMT, TNA, KYN, KJT, at LNL, upcoming KMST, TGN, PUNE
+            ("12123", "CSMT", 1, "", (self.clock - timedelta(minutes=155)).strftime("%H:%M"), "EXPRESS", 1, 0, 0),
+            ("12123", "TNA", 2, (self.clock - timedelta(minutes=120)).strftime("%H:%M"), (self.clock - timedelta(minutes=118)).strftime("%H:%M"), "EXPRESS", 1, 0, 34),
+            ("12123", "KYN", 3, (self.clock - timedelta(minutes=97)).strftime("%H:%M"), (self.clock - timedelta(minutes=95)).strftime("%H:%M"), "EXPRESS", 1, 0, 54),
+            ("12123", "KJT", 4, (self.clock - timedelta(minutes=55)).strftime("%H:%M"), (self.clock - timedelta(minutes=53)).strftime("%H:%M"), "EXPRESS", 1, 0, 100),
+            ("12123", "LNL", 5, (self.clock - timedelta(minutes=3)).strftime("%H:%M"), self.clock.strftime("%H:%M"), "EXPRESS", 1, 0, 128),
+            ("12123", "KMST", 6, (self.clock + timedelta(minutes=17)).strftime("%H:%M"), (self.clock + timedelta(minutes=19)).strftime("%H:%M"), "EXPRESS", 1, 0, 144),
+            ("12123", "TGN", 7, (self.clock + timedelta(minutes=33)).strftime("%H:%M"), (self.clock + timedelta(minutes=35)).strftime("%H:%M"), "EXPRESS", 1, 0, 158),
+            ("12123", "PUNE", 8, (self.clock + timedelta(minutes=70)).strftime("%H:%M"), "", "EXPRESS", 1, 0, 192),
+
+            # 12124 (Deccan Queen Down)
+            ("12124", "PUNE", 1, "", (self.clock - timedelta(minutes=25)).strftime("%H:%M"), "EXPRESS", 1, 0, 0),
+            ("12124", "TGN", 2, (self.clock + timedelta(minutes=3)).strftime("%H:%M"), (self.clock + timedelta(minutes=5)).strftime("%H:%M"), "EXPRESS", 1, 0, 34),
+            ("12124", "KMST", 3, (self.clock + timedelta(minutes=16)).strftime("%H:%M"), (self.clock + timedelta(minutes=18)).strftime("%H:%M"), "EXPRESS", 1, 0, 48),
+            ("12124", "LNL", 4, (self.clock + timedelta(minutes=38)).strftime("%H:%M"), (self.clock + timedelta(minutes=40)).strftime("%H:%M"), "EXPRESS", 1, 0, 64),
+            ("12124", "KJT", 5, (self.clock + timedelta(minutes=83)).strftime("%H:%M"), (self.clock + timedelta(minutes=85)).strftime("%H:%M"), "EXPRESS", 1, 0, 92),
+            ("12124", "KYN", 6, (self.clock + timedelta(minutes=123)).strftime("%H:%M"), (self.clock + timedelta(minutes=125)).strftime("%H:%M"), "EXPRESS", 1, 0, 138),
+            ("12124", "TNA", 7, (self.clock + timedelta(minutes=143)).strftime("%H:%M"), (self.clock + timedelta(minutes=145)).strftime("%H:%M"), "EXPRESS", 1, 0, 158),
+            ("12124", "CSMT", 8, (self.clock + timedelta(minutes=180)).strftime("%H:%M"), "", "EXPRESS", 1, 0, 192),
+
             # T101
             ("T101", "ST01", 1, "", (self.clock - timedelta(minutes=5)).strftime("%H:%M"), "EXPRESS", 1, 0, 0),
             ("T101", "ST02", 2, (self.clock + timedelta(minutes=15)).strftime("%H:%M"), (self.clock + timedelta(minutes=17)).strftime("%H:%M"), "EXPRESS", 1, 0, 15),
@@ -169,14 +283,61 @@ class TrainSimulator:
         cursor = conn.cursor()
         now_str = self.clock.isoformat()
 
-        if scenario_name == "RED_SIGNAL":
+        if scenario_name in ("UNSCHEDULED_STOP", "STOPPAGE_10M"):
+            cursor.execute(
+                """
+                INSERT OR REPLACE INTO events (event_id, type, target, start_time, duration_min, severity, parameters, active)
+                VALUES ('EV_STOP_01', 'UNSCHEDULED_STOP', '12123', ?, 10.0, 1.0, '{"reason": "Technical check / Loco brake inspection"}', 1)
+                """, (now_str,)
+            )
+            if "12123" in self.train_states:
+                self.train_states["12123"]["speed"] = 0.0
+                self.train_states["12123"]["delay"] += 10.0
+                self.train_states["12123"]["status"] = "STOPPED_EN_ROUTE"
+            if "T101" in self.train_states:
+                self.train_states["T101"]["speed"] = 0.0
+                self.train_states["T101"]["delay"] += 8.0
+
+        elif scenario_name in ("SPEED_RESTRICTION", "CONGESTION_HIGH"):
+            cursor.execute(
+                """
+                INSERT OR REPLACE INTO events (event_id, type, target, start_time, duration_min, severity, parameters, active)
+                VALUES ('EV_TSR_01', 'SPEED_RESTRICTION', 'B_LNL_KMST', ?, 30.0, 0.5, '{"speed_limit_kmh": 35.0}', 1)
+                """, (now_str,)
+            )
+            if "12123" in self.train_states:
+                self.train_states["12123"]["speed"] = 35.0
+                self.train_states["12123"]["delay"] += 7.0
+            if "T101" in self.train_states:
+                self.train_states["T101"]["speed"] = 40.0
+                self.train_states["T101"]["delay"] += 5.0
+
+        elif scenario_name == "RECOVERY_5M":
+            # Clear running with priority clearance
+            if "12123" in self.train_states:
+                self.train_states["12123"]["speed"] = 85.0
+                self.train_states["12123"]["delay"] = max(0.0, self.train_states["12123"]["delay"] - 5.0)
+                self.train_states["12123"]["status"] = "RUNNING"
+
+        elif scenario_name in ("CLEAN_RUN", "NORMAL_RUNNING"):
+            cursor.execute("UPDATE events SET active = 0")
+            if "12123" in self.train_states:
+                self.train_states["12123"]["speed"] = 68.0
+                self.train_states["12123"]["status"] = "RUNNING"
+            if "T101" in self.train_states:
+                self.train_states["T101"]["speed"] = 78.0
+                self.train_states["T101"]["status"] = "RUNNING"
+
+        elif scenario_name == "RED_SIGNAL":
             cursor.execute(
                 """
                 INSERT OR REPLACE INTO events (event_id, type, target, start_time, duration_min, severity, parameters, active)
                 VALUES ('EV_RED_01', 'RED_SIGNAL', 'SIG_B02', ?, 6.0, 1.0, '{"aspect": "RED"}', 1)
                 """, (now_str,)
             )
-            # T101 stops in front of signal
+            if "12123" in self.train_states:
+                self.train_states["12123"]["speed"] = 0.0
+                self.train_states["12123"]["delay"] += 6.0
             if "T101" in self.train_states:
                 self.train_states["T101"]["speed"] = 0.0
                 self.train_states["T101"]["delay"] += 6.0
@@ -186,23 +347,12 @@ class TrainSimulator:
             cursor.execute(
                 """
                 INSERT OR REPLACE INTO events (event_id, type, target, start_time, duration_min, severity, parameters, active)
-                VALUES ('EV_RAIN_01', 'HEAVY_RAIN', 'ALL', ?, 20.0, 0.82, '{"rain_mm": 24.5, "speed_factor": 0.82}', 1)
+                VALUES ('EV_RAIN_01', 'HEAVY_RAIN', 'ALL', ?, 20.0, 0.82, '{"rain_mm": 28.5, "speed_factor": 0.82}', 1)
                 """, (now_str,)
             )
             for t_id, t_data in self.train_states.items():
                 t_data["speed"] = max(20.0, t_data["speed"] * 0.82)
-                t_data["delay"] += 3.5
-
-        elif scenario_name == "SPEED_RESTRICTION":
-            cursor.execute(
-                """
-                INSERT OR REPLACE INTO events (event_id, type, target, start_time, duration_min, severity, parameters, active)
-                VALUES ('EV_TSR_01', 'SPEED_RESTRICTION', 'B02', ?, 30.0, 0.5, '{"speed_limit_kmh": 40.0}', 1)
-                """, (now_str,)
-            )
-            if "T101" in self.train_states:
-                self.train_states["T101"]["speed"] = 40.0
-                self.train_states["T101"]["delay"] += 5.0
+                t_data["delay"] += 4.5
 
         elif scenario_name == "LC_CLOSURE":
             cursor.execute(
@@ -211,41 +361,36 @@ class TrainSimulator:
                 VALUES ('EV_LC_01', 'LC_CLOSURE', 'B02', ?, 4.0, 1.0, '{"gate_id": "LC_02"}', 1)
                 """, (now_str,)
             )
+            if "12123" in self.train_states:
+                self.train_states["12123"]["delay"] += 4.0
             if "T101" in self.train_states:
                 self.train_states["T101"]["delay"] += 4.0
 
-        elif scenario_name == "UNSCHEDULED_STOP":
-            cursor.execute(
-                """
-                INSERT OR REPLACE INTO events (event_id, type, target, start_time, duration_min, severity, parameters, active)
-                VALUES ('EV_STOP_01', 'UNSCHEDULED_STOP', 'T101', ?, 8.0, 1.0, '{"reason": "Technical check"}', 1)
-                """, (now_str,)
-            )
-            if "T101" in self.train_states:
-                self.train_states["T101"]["speed"] = 0.0
-                self.train_states["T101"]["delay"] += 8.0
-
         elif scenario_name == "GPS_DEGRADED":
-            # Injects jitter + staleness into T101 GPS
-            if "T101" in self.train_states:
-                stale_clock = (self.clock - timedelta(seconds=140)).isoformat()
-                raw_event = {
-                    "train_id": "T101",
-                    "latitude": self.train_states["T101"]["lat"] + 0.008, # Jitter
-                    "longitude": self.train_states["T101"]["lon"] + 0.008,
-                    "speed_kmh": 65.0,
-                    "timestamp": stale_clock
-                }
-                cleaned, quality, _ = data_cleaner.clean_position_event(raw_event, self.clock.isoformat())
-                if cleaned:
-                    self.train_states["T101"]["quality"] = quality
-                    self.train_states["T101"]["timestamp"] = stale_clock
+            # Injects jitter + staleness into GPS
+            target_id = "12123" if "12123" in self.train_states else "T101"
+            stale_clock = (self.clock - timedelta(seconds=140)).isoformat()
+            raw_event = {
+                "train_id": target_id,
+                "latitude": self.train_states[target_id]["lat"] + 0.008,
+                "longitude": self.train_states[target_id]["lon"] + 0.008,
+                "speed_kmh": 65.0,
+                "timestamp": stale_clock
+            }
+            cleaned, quality, _ = data_cleaner.clean_position_event(raw_event, self.clock.isoformat())
+            if cleaned:
+                self.train_states[target_id]["quality"] = quality
+                self.train_states[target_id]["timestamp"] = stale_clock
 
         elif scenario_name == "SINGLE_TRACK_CROSSING":
-            # T101 and T104 compete for single track section B02
-            if "T101" in self.train_states and "T104" in self.train_states:
-                self.train_states["T101"]["delay"] += 7.0 # Late Express
-                self.train_states["T104"]["delay"] += 5.5 # Opposing train waiting at ST03 loop
+            if "12123" in self.train_states and "12124" in self.train_states:
+                self.train_states["12123"]["delay"] += 8.0
+                self.train_states["12124"]["delay"] += 6.0
+            elif "T101" in self.train_states and "T104" in self.train_states:
+                self.train_states["T101"]["delay"] += 7.0
+                self.train_states["T104"]["delay"] += 5.5
+
+        conn.commit()
 
         conn.commit()
         conn.close()
@@ -264,6 +409,43 @@ class TrainSimulator:
         st02 = rail_graph.get_station("ST02") or {"lat": 19.0178, "lon": 73.0160}
         st03 = rail_graph.get_station("ST03") or {"lat": 18.9894, "lon": 73.1175}
         st04 = rail_graph.get_station("ST04") or {"lat": 18.7500, "lon": 73.4200}
+
+        # Advance 12123 (Mumbai Pune Express)
+        t12123 = self.train_states.get("12123")
+        if t12123 and t12123["status"] != "TERMINATED":
+            t12123["timestamp"] = clock_str
+            prog = t12123["progress_ratio"] + (0.03 * (t12123["speed"] / 65.0))
+            lnl = rail_graph.get_station("LNL") or {"lat": 18.7500, "lon": 73.4072}
+            kmst = rail_graph.get_station("KMST") or {"lat": 18.7617, "lon": 73.5606}
+            tgn = rail_graph.get_station("TGN") or {"lat": 18.7300, "lon": 73.6700}
+            pune = rail_graph.get_station("PUNE") or {"lat": 18.5284, "lon": 73.8744}
+
+            if prog > 1.0:
+                if t12123["current_stop_idx"] == 5:
+                    t12123["current_stop_idx"] = 6
+                    t12123["target_station"] = "TGN"
+                    t12123["block_id"] = "B_KMST_TGN"
+                    t12123["progress_ratio"] = 0.1
+                    t12123["lat"] = kmst["lat"] + 0.1 * (tgn["lat"] - kmst["lat"])
+                    t12123["lon"] = kmst["lon"] + 0.1 * (tgn["lon"] - kmst["lon"])
+                elif t12123["current_stop_idx"] == 6:
+                    t12123["current_stop_idx"] = 7
+                    t12123["target_station"] = "PUNE"
+                    t12123["block_id"] = "B_TGN_PUNE"
+                    t12123["progress_ratio"] = 0.1
+                    t12123["lat"] = tgn["lat"] + 0.1 * (pune["lat"] - tgn["lat"])
+                    t12123["lon"] = tgn["lon"] + 0.1 * (pune["lon"] - tgn["lon"])
+            else:
+                t12123["progress_ratio"] = prog
+                if t12123["current_stop_idx"] <= 5:
+                    t12123["lat"] = lnl["lat"] + prog * (kmst["lat"] - lnl["lat"])
+                    t12123["lon"] = lnl["lon"] + prog * (kmst["lon"] - lnl["lon"])
+                elif t12123["current_stop_idx"] == 6:
+                    t12123["lat"] = kmst["lat"] + prog * (tgn["lat"] - kmst["lat"])
+                    t12123["lon"] = kmst["lon"] + prog * (tgn["lon"] - kmst["lon"])
+                else:
+                    t12123["lat"] = tgn["lat"] + prog * (pune["lat"] - tgn["lat"])
+                    t12123["lon"] = tgn["lon"] + prog * (pune["lon"] - tgn["lon"])
 
         # Advance T101
         t101 = self.train_states.get("T101")
@@ -284,10 +466,11 @@ class TrainSimulator:
                 t101["lon"] = st01["lon"] + prog * (st02["lon"] - st01["lon"])
 
         # Check cascading propagation
-        if t101 and t101["delay"] > 0:
+        active_delay_train = "12123" if (t12123 and t12123["delay"] > 0) else ("T101" if (t101 and t101["delay"] > 0) else None)
+        if active_delay_train:
             propagation_engine.calculate_network_propagation(
-                primary_train_id="T101",
-                primary_delay_min=t101["delay"],
+                primary_train_id=active_delay_train,
+                primary_delay_min=self.train_states[active_delay_train]["delay"],
                 train_states=self.train_states
             )
 

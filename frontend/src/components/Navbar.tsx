@@ -54,18 +54,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   // Tabs for Passenger / User Portal (Read-only, Passenger tools)
   const userTabs = [
-    { id: "passenger", label: "Live Train ETA", icon: Train, badge: "Live" },
+    { id: "passenger", label: "Live Trains & ETA", icon: Train, badge: "Live" },
+    { id: "map", label: "Live Leaflet Map", icon: MapPin, badge: "OSM" },
     { id: "station", label: "Station Display Board", icon: LayoutDashboard },
-    { id: "announcements", label: "Multilingual Audio (PAS)", icon: Volume2, badge: "Trilingual" },
-    { id: "map", label: "Corridor Live Map", icon: MapPin },
+    { id: "delay-analysis", label: "Why Delayed?", icon: Activity, badge: "Root Cause" },
+    { id: "announcements", label: "Audio Announcements", icon: Volume2, badge: "Trilingual" },
+    { id: "about", label: "About Platform", icon: BrainCircuit },
   ];
 
   // Tabs for Admin / Controller Portal (Authority tools)
   const adminTabs = [
-    { id: "control", label: "Traffic Control & Dispatch", icon: Activity, badge: "Advisory" },
-    { id: "simulator", label: "Disruption Simulator", icon: Sliders, badge: "Scenario Lab" },
-    { id: "learning", label: "ML Model & Accuracy", icon: BrainCircuit },
-    { id: "sources", label: "Data Governance & CRIS", icon: Database },
+    { id: "control", label: "OCC Control Room", icon: Activity, badge: "Advisory" },
+    { id: "simulator", label: "Event Simulator Lab", icon: Sliders, badge: "Scenario Lab" },
+    { id: "learning", label: "ML & Model Analytics", icon: BrainCircuit },
+    { id: "api-docs", label: "API Explorer", icon: Database, badge: "REST" },
+    { id: "sources", label: "Data Sources & Auth", icon: Database },
   ];
 
   // Format Sim Time HH:MM:SS in Local Time

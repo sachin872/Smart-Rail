@@ -1,4 +1,8 @@
 train_id,train_name,class,priority,rake_id
+12123,Mumbai Pune Express,EXPRESS,1,RAKE_12123
+12124,Deccan Queen (Down),EXPRESS,1,RAKE_12124
+11007,Deccan Express,EXPRESS,1,RAKE_11007
+12127,Mumbai Pune Intercity,EXPRESS,1,RAKE_12127
 T101,Deccan Superfast,EXPRESS,1,RAKE_01
 T102,Local Commuter,PASSENGER,2,RAKE_02
 T103,Karjat Shuttle,PASSENGER,2,RAKE_03

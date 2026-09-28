@@ -7,15 +7,19 @@ interface StationBoardPageProps {
 }
 
 export const StationBoardPage: React.FC<StationBoardPageProps> = ({ simTime }) => {
-  const [selectedStation, setSelectedStation] = useState<string>("ST02");
+  const [selectedStation, setSelectedStation] = useState<string>("LNL");
   const [boardData, setBoardData] = useState<StationBoardResponse | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   const stations = [
-    { code: "ST01", name: "Mumbai CST", fullName: "Chhatrapati Shivaji Maharaj Terminus" },
-    { code: "ST02", name: "Kalyan Jn", fullName: "Kalyan Junction Interchange" },
-    { code: "ST03", name: "Karjat Jn", fullName: "Karjat Junction" },
-    { code: "ST04", name: "Lonavala", fullName: "Lonavala Hill Station" },
+    { code: "CSMT", name: "Mumbai CSMT", fullName: "Chhatrapati Shivaji Maharaj Terminus" },
+    { code: "TNA", name: "Thane", fullName: "Thane Junction" },
+    { code: "KYN", name: "Kalyan Jn", fullName: "Kalyan Junction Interchange" },
+    { code: "KJT", name: "Karjat Jn", fullName: "Karjat Junction" },
+    { code: "LNL", name: "Lonavala", fullName: "Lonavala Hill Station" },
+    { code: "KMST", name: "Kamshet", fullName: "Kamshet Station" },
+    { code: "TGN", name: "Talegaon", fullName: "Talegaon Dabhade" },
+    { code: "PUNE", name: "Pune Jn", fullName: "Pune Junction Terminus" },
   ];
 
   const fetchBoard = async (code: string) => {
