@@ -10,10 +10,16 @@ import {
   Play,
   Pause,
   Clock,
-  ChevronRight
+  ChevronRight,
+  User,
+  Shield,
+  Volume2,
+  MapPin
 } from "lucide-react";
 
 interface NavbarProps {
+  portal: "user" | "admin";
+  setPortal: (portal: "user" | "admin") => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   simTime: string;
@@ -25,6 +31,8 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
+  portal,
+  setPortal,
   activeTab,
   setActiveTab,
   simTime,
@@ -34,13 +42,20 @@ export const Navbar: React.FC<NavbarProps> = ({
   onStep,
   onReset,
 }) => {
-  const tabs = [
-    { id: "passenger", label: "Passenger Live ETA", icon: Train, badge: "Live" },
-    { id: "station", label: "Station Board", icon: LayoutDashboard },
-    { id: "control", label: "Control Room", icon: Activity, badge: "Advisory" },
-    { id: "simulator", label: "Disruption Simulator", icon: Sliders },
-    { id: "learning", label: "Model Learning & Accuracy", icon: BrainCircuit },
-    { id: "sources", label: "Data Governance", icon: Database },
+  // Tabs for Passenger / User Portal
+  const userTabs = [
+    { id: "passenger", label: "Live Train ETA", icon: Train, badge: "Live" },
+    { id: "station", label: "Station Display Board", icon: LayoutDashboard },
+    { id: "announcements", label: "Multilingual Audio (PAS)", icon: Volume2, badge: "Trilingual" },
+    { id: "map", label: "Corridor Live Map", icon: MapPin },
+  ];
+
+  // Tabs for Admin / Controller Portal
+  const adminTabs = [
+    { id: "control", label: "Traffic Control & Dispatch", icon: Activity, badge: "Advisory" },
+    { id: "simulator", label: "Disruption Simulator", icon: Sliders, badge: "Scenario Lab" },
+    { id: "learning", label: "ML Model & Accuracy", icon: BrainCircuit },
+    { id: "sources", label: "Data Governance & CRIS", icon: Database },
   ];
 
   // Format Sim Time HH:MM:SS in Local Time
@@ -68,7 +83,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const getScenarioBadge = (sc: string) => {
     if (sc === "CLEAN_RUN") {
       return (
-        <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 px-2 py-0.5 rounded text-[11px] font-medium">
+        <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 px-2 py-0.5 rounded text-[11px] font-medium flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
           Normal Running
         </span>
       );
@@ -80,6 +96,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       </span>
     );
   };
+
+  const currentTabs = portal === "user" ? userTabs : adminTabs;
 
   return (
     <header className="bg-slate-900 text-white shadow-lg border-b border-slate-800 sticky top-0 z-50">
@@ -98,15 +116,56 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden sm:block">
-              Dynamic ETA Forecast & Traffic Decision Support
+              Dynamic ETA Forecast & Traffic Decision Support Platform
             </p>
           </div>
+        </div>
+
+        {/* Center Portal Switcher Toggle (User Panel vs Admin Panel) */}
+        <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
+          <button
+            onClick={() => {
+              setPortal("user");
+              if (adminTabs.some((t) => t.id === activeTab)) {
+                setActiveTab("passenger");
+              }
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer ${
+              portal === "user"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>Passenger Portal</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Live sync connected"></span>
+          </button>
+
+          <button
+            onClick={() => {
+              setPortal("admin");
+              if (userTabs.some((t) => t.id === activeTab)) {
+                setActiveTab("control");
+              }
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer ${
+              portal === "admin"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Admin & Operations</span>
+            <span className="text-[9px] bg-indigo-900 text-indigo-300 border border-indigo-700 px-1 py-0.2 rounded font-mono font-semibold">
+              OCC
+            </span>
+          </button>
         </div>
 
         {/* Live Simulation Clock & Quick Scenario Controls */}
         <div className="flex items-center space-x-3">
           {/* Active Scenario Indicator */}
-          <div className="hidden md:flex items-center space-x-1.5">
+          <div className="hidden lg:flex items-center space-x-1.5">
             <span className="text-slate-400">State:</span>
             {getScenarioBadge(scenario)}
           </div>
@@ -147,7 +206,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onReset}
               className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition border border-slate-700 cursor-pointer"
-              title="Reset simulation to deterministic clean seed 42"
+              title="Reset simulation to deterministic clean state"
             >
               <RotateCcw className="w-3 h-3" />
               <span className="hidden sm:inline">Reset</span>
@@ -156,37 +215,49 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Modern Navigation Tabs */}
-      <div className="max-w-7xl mx-auto px-4 flex space-x-1 overflow-x-auto py-1.5 scrollbar-none">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
-                isActive
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                  : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
-              }`}
-            >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-slate-400"}`} />
-              <span>{tab.label}</span>
-              {tab.badge && (
-                <span
-                  className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider ${
-                    isActive
-                      ? "bg-blue-800 text-blue-100"
-                      : "bg-slate-800 text-slate-400"
-                  }`}
-                >
-                  {tab.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      {/* Sub-Navigation Tabs per Portal */}
+      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between overflow-x-auto py-1.5 scrollbar-none border-t border-slate-800/40">
+        <div className="flex space-x-1">
+          {currentTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
+                  isActive
+                    ? portal === "user"
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                      : "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                    : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-slate-400"}`} />
+                <span>{tab.label}</span>
+                {tab.badge && (
+                  <span
+                    className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider ${
+                      isActive
+                        ? "bg-black/30 text-white"
+                        : "bg-slate-800 text-slate-400"
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Panel Mode Indicator Badge */}
+        <div className="hidden md:flex items-center gap-2 text-[11px] font-mono pl-4 text-slate-400 whitespace-nowrap">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            {portal === "user" ? "Passenger Portal Connected" : "Operations Central Connected"}
+          </span>
+        </div>
       </div>
     </header>
   );
